@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { connectDB, getDB } from "./config/db";
 import { recipesRouter } from "./routes/recipes";
+import { interactionsRouter } from "./routes/interactions";
 
 dotenv.config();
 
@@ -47,6 +48,9 @@ app.get("/", (req: Request, res: Response) => {
 
 // Recipe CRUD Routes
 app.use("/api/recipes", recipesRouter);
+
+// Recipe Interactions Routes
+app.use("/api/interactions", interactionsRouter);
 
 // Global Error Handler for Express 5
 app.use((err: any, req: Request, res: Response, next: any) => {
