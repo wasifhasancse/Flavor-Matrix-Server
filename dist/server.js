@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const db_1 = require("./config/db");
+const recipes_1 = require("./routes/recipes");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
@@ -43,6 +44,8 @@ app.get("/", (req, res) => {
         docs: "/health"
     });
 });
+// Recipe CRUD Routes
+app.use("/api/recipes", recipes_1.recipesRouter);
 // Global Error Handler for Express 5
 app.use((err, req, res, next) => {
     console.error("Unhandled server error:", err);

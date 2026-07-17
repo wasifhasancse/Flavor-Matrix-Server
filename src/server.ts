@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { connectDB, getDB } from "./config/db";
+import { recipesRouter } from "./routes/recipes";
 
 dotenv.config();
 
@@ -43,6 +44,9 @@ app.get("/", (req: Request, res: Response) => {
     docs: "/health"
   });
 });
+
+// Recipe CRUD Routes
+app.use("/api/recipes", recipesRouter);
 
 // Global Error Handler for Express 5
 app.use((err: any, req: Request, res: Response, next: any) => {
