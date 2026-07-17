@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { connectDB, getDB } from "./config/db";
 import { recipesRouter } from "./routes/recipes";
 import { interactionsRouter } from "./routes/interactions";
+import { paymentsRouter } from "./routes/payments";
 
 dotenv.config();
 
@@ -12,7 +13,15 @@ const PORT = process.env.PORT || 5000;
 
 // Global Middlewares
 app.use(cors());
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req: any, res, buf) => {
+      if (req.originalUrl && req.originalUrl.startsWith("/api/payments/webhook")) {
+        req.rawBody = buf;
+      }
+    },
+  })
+);
 
 // Basic Health Check Route
 app.get("/health", async (req: Request, res: Response) => {
@@ -51,6 +60,9 @@ app.use("/api/recipes", recipesRouter);
 
 // Recipe Interactions Routes
 app.use("/api/interactions", interactionsRouter);
+
+// Stripe Payments Routes
+app.use("/api/payments", paymentsRouter);
 
 // Global Error Handler for Express 5
 app.use((err: any, req: Request, res: Response, next: any) => {
