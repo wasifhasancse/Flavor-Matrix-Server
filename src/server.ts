@@ -5,6 +5,7 @@ import { connectDB, getDB } from "./config/db";
 import { recipesRouter } from "./routes/recipes";
 import { interactionsRouter } from "./routes/interactions";
 import { paymentsRouter } from "./routes/payments";
+import { adminRouter } from "./routes/admin";
 
 dotenv.config();
 
@@ -63,6 +64,9 @@ app.use("/api/interactions", interactionsRouter);
 
 // Stripe Payments Routes
 app.use("/api/payments", paymentsRouter);
+
+// Administrative Controls & Stats
+app.use("/api/admin", adminRouter);
 
 // Global Error Handler for Express 5
 app.use((err: any, req: Request, res: Response, next: any) => {
