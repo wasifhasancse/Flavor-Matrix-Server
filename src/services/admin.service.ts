@@ -22,6 +22,82 @@ export class AdminService {
   }
 
   /**
+   * Aggregates users with totalMoneySpent from payments collection, server-side search & pagination.
+   */
+  static async listUsers(page = 1, limit = 10, search = "") {
+    const skip = (page - 1) * limit;
+
+    const matchStage: any = {};
+    if (search && search.trim() !== "") {
+      const regex = new RegExp(search.trim(), "i");
+      matchStage.$or = [{ name: regex }, { email: regex }];
+    }
+
+    const pipeline: any[] = [
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: "payments",
+          let: { userId: "$_id", userEmail: "$email" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    {
+                      $or: [
+                        { $eq: ["$userId", "$$userId"] },
+                        { $eq: ["$userId", { $toString: "$$userId" }] },
+                        { $eq: ["$userEmail", "$$userEmail"] },
+                      ],
+                    },
+                    {
+                      $in: ["$paymentStatus", ["succeeded", "paid"]],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+          as: "joinedPayments",
+        },
+      },
+      {
+        $addFields: {
+          totalMoneySpent: {
+            $sum: "$joinedPayments.amount",
+          },
+        },
+      },
+      {
+        $project: {
+          joinedPayments: 0,
+        },
+      },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const result = await collections.users.aggregate(pipeline).toArray();
+
+    const facet = result[0] || { data: [], totalCount: [] };
+    const data = facet.data || [];
+    const totalCount = facet.totalCount[0]?.count || 0;
+
+    return {
+      users: data,
+      totalCount,
+      page,
+      limit,
+      totalPages: Math.ceil(totalCount / limit) || 1,
+    };
+  }
+
+  /**
    * Toggles isBlocked status for a user.
    */
   static async toggleUserBlock(userId: string) {

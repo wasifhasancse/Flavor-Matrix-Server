@@ -16,6 +16,23 @@ export class AdminController {
   }
 
   /**
+   * GET /admin/users - Aggregated users list.
+   */
+  static async listUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const search = (req.query.search as string) || "";
+
+      const data = await AdminService.listUsers(page, limit, search);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Admin List Users Error:", error);
+      res.status(500).json({ error: "Internal server error while listing users." });
+    }
+  }
+
+  /**
    * Block or unblock a user.
    */
   static async toggleUserBlock(req: Request, res: Response): Promise<void> {

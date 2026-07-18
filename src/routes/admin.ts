@@ -11,7 +11,9 @@ router.use(verifyToken as any, adminCheck as any);
 // Analytics Stats
 router.get("/stats", AdminController.getStats);
 
-// User Management Toggles
+// User Management Toggles & Aggregations
+router.get("/users", AdminController.listUsers);
+router.patch("/users/:id/status", AdminController.toggleUserBlock);
 router.patch("/users/:id/block", AdminController.toggleUserBlock);
 
 // Recipe Moderation Override
