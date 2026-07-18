@@ -23,8 +23,10 @@ router.delete("/recipes/:id", AdminController.deleteRecipe);
 router.patch("/recipes/:id/feature", AdminController.toggleFeaturedRecipe);
 router.patch("/recipes/:id/toggle-featured", AdminController.toggleFeaturedRecipe);
 
-// Flagged Content & Moderation Reports
-router.get("/reports", AdminController.listReports);
+// Flagged Content & Moderation Reports Queue
+router.get("/reports", AdminController.listAggregatedReports);
+router.get("/reports/:recipeId/details", AdminController.getReportDetails);
+router.patch("/reports/:recipeId/dismiss", AdminController.dismissReports);
 router.patch("/reports/:id/resolve", AdminController.toggleReportStatus);
 router.delete("/reports/:id/recipe", AdminController.deleteReportedRecipe);
 

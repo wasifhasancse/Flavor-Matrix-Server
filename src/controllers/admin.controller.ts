@@ -144,6 +144,51 @@ export class AdminController {
   }
 
   /**
+   * List aggregated moderation reports grouped by recipeId.
+   */
+  static async listAggregatedReports(req: Request, res: Response): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const status = (req.query.status as string) || "pending";
+
+      const data = await AdminService.listAggregatedReports(page, limit, status);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Admin List Aggregated Reports Error:", error);
+      res.status(500).json({ error: "Internal server error while retrieving reports." });
+    }
+  }
+
+  /**
+   * Get all individual report documents for a recipeId.
+   */
+  static async getReportDetails(req: Request, res: Response): Promise<void> {
+    try {
+      const recipeId = req.params.recipeId as string;
+      const details = await AdminService.getReportDetailsByRecipe(recipeId);
+      res.status(200).json({ details });
+    } catch (error) {
+      console.error("Admin Get Report Details Error:", error);
+      res.status(500).json({ error: "Internal server error while fetching report details." });
+    }
+  }
+
+  /**
+   * Dismiss all reports linked to a recipeId.
+   */
+  static async dismissReports(req: Request, res: Response): Promise<void> {
+    try {
+      const recipeId = req.params.recipeId as string;
+      const result = await AdminService.dismissReportsByRecipe(recipeId);
+      res.status(200).json({ message: "Reports dismissed successfully.", data: result });
+    } catch (error) {
+      console.error("Admin Dismiss Reports Error:", error);
+      res.status(500).json({ error: "Internal server error while dismissing reports." });
+    }
+  }
+
+  /**
    * List all moderation reports.
    */
   static async listReports(req: Request, res: Response): Promise<void> {

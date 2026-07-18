@@ -247,6 +247,122 @@ export class AdminService {
   }
 
   /**
+   * Aggregates reports by recipeId, joining recipe details, report count & primary reason.
+   */
+  static async listAggregatedReports(page = 1, limit = 10, status = "pending") {
+    const skip = (page - 1) * limit;
+
+    const matchStage: any = {};
+    if (status !== "all") {
+      matchStage.status = status;
+    }
+
+    const pipeline: any[] = [
+      { $match: matchStage },
+      {
+        $group: {
+          _id: "$recipeId",
+          reportCount: { $sum: 1 },
+          reasons: { $push: "$reason" },
+          latestReportAt: { $max: "$createdAt" },
+        },
+      },
+      {
+        $lookup: {
+          from: "recipes",
+          let: { recipeIdStr: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $eq: ["$_id", "$$recipeIdStr"] },
+                    { $eq: ["$id", "$$recipeIdStr"] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: "recipeDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$recipeDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          recipeId: "$_id",
+          recipeName: { $ifNull: ["$recipeDetails.title", "$recipeDetails.recipeName", "Reported Item"] },
+          recipeImage: { $ifNull: ["$recipeDetails.image", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80"] },
+          authorName: { $ifNull: ["$recipeDetails.author", "$recipeDetails.authorName", "Chef User"] },
+          authorEmail: { $ifNull: ["$recipeDetails.authorEmail", "chef@example.com"] },
+          reportCount: 1,
+          reasons: 1,
+          primaryReason: { $arrayElemAt: ["$reasons", 0] },
+          latestReportAt: 1,
+        },
+      },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const result = await collections.reports.aggregate(pipeline).toArray();
+    const facet = result[0] || { data: [], totalCount: [] };
+    const data = facet.data || [];
+    const totalCount = facet.totalCount[0]?.count || 0;
+
+    return {
+      reports: data,
+      totalCount,
+      page,
+      limit,
+      totalPages: Math.ceil(totalCount / limit) || 1,
+    };
+  }
+
+  /**
+   * Fetches all individual reporting documents matching a recipeId.
+   */
+  static async getReportDetailsByRecipe(recipeId: string) {
+    const query = ObjectId.isValid(recipeId)
+      ? { $or: [{ recipeId: recipeId }, { recipeId: new ObjectId(recipeId) }] }
+      : { recipeId: recipeId };
+
+    const reports = await collections.reports.find(query).sort({ createdAt: -1 }).toArray();
+
+    return reports.map((r) => ({
+      id: r._id.toString(),
+      recipeId: r.recipeId,
+      reporterEmail: r.reporterEmail || r.reportedBy || "user@example.com",
+      reason: r.reason || "spam",
+      createdAt: r.createdAt || new Date(),
+    }));
+  }
+
+  /**
+   * Dismisses all reports linked to a recipeId.
+   */
+  static async dismissReportsByRecipe(recipeId: string) {
+    const query = ObjectId.isValid(recipeId)
+      ? { $or: [{ recipeId: recipeId }, { recipeId: new ObjectId(recipeId) }] }
+      : { recipeId: recipeId };
+
+    await collections.reports.updateMany(query, {
+      $set: { status: "dismissed", updatedAt: new Date() },
+    });
+
+    return { success: true, recipeId };
+  }
+
+  /**
    * Lists all moderation reports.
    */
   static async listReports() {
@@ -293,7 +409,6 @@ export class AdminService {
       await collections.recipes.deleteOne({ _id: new ObjectId(recipeId) });
     }
 
-    // Resolve this report and all other reports for this recipe
     await collections.reports.updateMany(
       { recipeId: recipeId },
       { $set: { status: "resolved", updatedAt: new Date() } }
