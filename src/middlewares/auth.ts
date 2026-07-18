@@ -30,7 +30,7 @@ export async function signTokenAndSetCookie(res: Response, payload: JWTPayload):
   res.cookie("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "strict",
     maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
   });
 
@@ -38,30 +38,29 @@ export async function signTokenAndSetCookie(res: Response, payload: JWTPayload):
 }
 
 /**
- * Middleware that parses the token from cookies, validates it,
- * and appends the decrypted user payload to req.user.
+ * Middleware that parses the token from cookies or authorization header,
+ * validates it using jose-cjs, and appends user payload to req.user.
  */
 export async function verifyToken(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const cookiesRaw = req.headers.cookie;
-    
-    if (!cookiesRaw) {
-      res.status(401).json({ error: "Unauthorized. Authentication cookie is missing." });
-      return;
+    let token = (req as any).cookies?.token;
+
+    if (!token && req.headers.cookie) {
+      const cookies = Object.fromEntries(
+        req.headers.cookie.split(";").map((cookieStr) => {
+          const [k, ...v] = cookieStr.trim().split("=");
+          return [k, v.join("=")];
+        })
+      );
+      token = cookies.token;
     }
 
-    // Manual parser of the cookies header
-    const cookies = Object.fromEntries(
-      cookiesRaw.split(";").map((cookieStr) => {
-        const [k, ...v] = cookieStr.trim().split("=");
-        return [k, v.join("=")];
-      })
-    );
-
-    const token = cookies.token;
+    if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
 
     if (!token) {
-      res.status(401).json({ error: "Unauthorized. Access token is missing." });
+      res.status(401).json({ error: "Unauthorized. Authentication cookie or Bearer token is missing." });
       return;
     }
 

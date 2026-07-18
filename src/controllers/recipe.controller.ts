@@ -71,16 +71,18 @@ export class RecipeController {
   }
 
   /**
-   * Controller to get all recipes with pagination & filtering.
+   * Controller to get all recipes with server-side pagination & category filtering.
    */
   static async getRecipes(req: Request, res: Response): Promise<void> {
     try {
-      const { category, page, limit } = req.query;
+      const { category, categories, page, limit, search } = req.query;
 
       const result = await RecipeService.getRecipes({
-        category: category as string,
+        category: category as any,
+        categories: categories as any,
         page: page as string,
         limit: limit as string,
+        search: search as string,
       });
 
       res.status(200).json(result);

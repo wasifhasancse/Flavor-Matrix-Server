@@ -63,30 +63,50 @@ export class RecipeService {
   }
 
   /**
-   * Retrieves recipes with pagination & category filter.
+   * Retrieves recipes with server-side pagination & MongoDB $in array category filtering.
    */
-  static async getRecipes(query: { category?: string; page?: string; limit?: string }) {
-    const filter: any = {};
+  static async getRecipes(query: { category?: string | string[]; categories?: string | string[]; page?: string; limit?: string; search?: string }) {
+    const rawCategories = query.categories || query.category;
+    let catList: string[] = [];
 
-    if (query.category) {
-      const catList = query.category.split(",").map((c) => c.trim()).filter((c) => c.length > 0);
-      if (catList.length > 0) {
-        filter.category = { $in: catList };
-      }
+    if (Array.isArray(rawCategories)) {
+      catList = rawCategories.map((c) => String(c).trim()).filter(Boolean);
+    } else if (typeof rawCategories === "string") {
+      catList = rawCategories.split(",").map((c) => c.trim()).filter(Boolean);
+    }
+
+    const filter: any = {};
+    if (catList.length > 0) {
+      filter.category = {
+        $in: catList.map((cat) => new RegExp(`^${cat.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i")),
+      };
+    }
+
+    if (query.search && typeof query.search === "string" && query.search.trim() !== "") {
+      const regex = new RegExp(query.search.trim(), "i");
+      filter.$or = [{ recipeName: regex }, { title: regex }, { authorName: regex }, { authorEmail: regex }];
     }
 
     const page = Math.max(1, Number(query.page || "1"));
     const limit = Math.max(1, Number(query.limit || "6"));
     const skip = (page - 1) * limit;
 
-    const list = await collections.recipes
-      .find(filter)
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+    const pipeline: any[] = [
+      { $match: filter },
+      { $sort: { createdAt: -1 } },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    ];
 
-    const total = await collections.recipes.countDocuments(filter);
-    const totalPages = Math.ceil(total / limit);
+    const result = await collections.recipes.aggregate(pipeline).toArray();
+    const facet = result[0] || { data: [], totalCount: [] };
+    const list = facet.data || [];
+    const total = facet.totalCount[0]?.count || 0;
+    const totalPages = Math.ceil(total / limit) || 1;
 
     return {
       recipes: list,
