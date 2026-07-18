@@ -120,6 +120,47 @@ export class AdminService {
   }
 
   /**
+   * Lists all recipes with pagination, searching & category/featured filtering.
+   */
+  static async listRecipes(page = 1, limit = 10, search = "", category = "all", featured = "all") {
+    const skip = (page - 1) * limit;
+
+    const query: any = {};
+    if (search && search.trim() !== "") {
+      const regex = new RegExp(search.trim(), "i");
+      query.$or = [
+        { title: regex },
+        { recipeName: regex },
+        { author: regex },
+        { authorEmail: regex },
+      ];
+    }
+
+    if (category && category !== "all") {
+      query.category = { $regex: new RegExp(`^${category}$`, "i") };
+    }
+
+    if (featured === "featured") {
+      query.isFeatured = true;
+    } else if (featured === "non-featured") {
+      query.isFeatured = { $ne: true };
+    }
+
+    const [recipes, totalCount] = await Promise.all([
+      collections.recipes.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray(),
+      collections.recipes.countDocuments(query),
+    ]);
+
+    return {
+      recipes,
+      totalCount,
+      page,
+      limit,
+      totalPages: Math.ceil(totalCount / limit) || 1,
+    };
+  }
+
+  /**
    * Edits any recipe.
    */
   static async editRecipe(recipeId: string, updateData: any) {

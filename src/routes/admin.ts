@@ -16,9 +16,11 @@ router.get("/users", AdminController.listUsers);
 router.patch("/users/:id/status", AdminController.toggleUserBlock);
 router.patch("/users/:id/block", AdminController.toggleUserBlock);
 
-// Recipe Moderation Override
+// Recipe Moderation Override & List
+router.get("/recipes", AdminController.listRecipes);
 router.put("/recipes/:id", AdminController.editRecipe);
 router.delete("/recipes/:id", AdminController.deleteRecipe);
+router.patch("/recipes/:id/feature", AdminController.toggleFeaturedRecipe);
 router.patch("/recipes/:id/toggle-featured", AdminController.toggleFeaturedRecipe);
 
 // Flagged Content & Moderation Reports

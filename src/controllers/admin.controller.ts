@@ -56,6 +56,25 @@ export class AdminController {
   }
 
   /**
+   * GET /admin/recipes - List recipes with server-side pagination & filtering.
+   */
+  static async listRecipes(req: Request, res: Response): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const search = (req.query.search as string) || "";
+      const category = (req.query.category as string) || "all";
+      const featured = (req.query.featured as string) || "all";
+
+      const data = await AdminService.listRecipes(page, limit, search, category, featured);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Admin List Recipes Error:", error);
+      res.status(500).json({ error: "Internal server error while retrieving recipes." });
+    }
+  }
+
+  /**
    * Edit any recipe.
    */
   static async editRecipe(req: Request, res: Response): Promise<void> {
