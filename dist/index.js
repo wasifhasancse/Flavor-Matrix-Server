@@ -8,5 +8,5 @@ dotenv_1.default.config();
 const app_1 = __importDefault(require("./src/app"));
 const port = process.env.PORT || 5000;
 app_1.default.listen(port, () => {
-    console.log(`NestEdge Server listening on port ${port}`);
+    console.log(`Flavor Matrix Server listening on port ${port}`);
 });

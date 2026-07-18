@@ -69,7 +69,7 @@ export class RecipeService {
   /**
    * Retrieves recipes with server-side pagination & MongoDB $in array category filtering.
    */
-  static async getRecipes(query: { category?: string | string[]; categories?: string | string[]; page?: string; limit?: string; search?: string }) {
+  static async getRecipes(query: { category?: string | string[]; categories?: string | string[]; page?: string; limit?: string; search?: string; difficultyLevel?: string; sortBy?: string; sortOrder?: string }) {
     const rawCategories = query.categories || query.category;
     let catList: string[] = [];
 
@@ -80,10 +80,14 @@ export class RecipeService {
     }
 
     const filter: any = {};
-    if (catList.length > 0) {
+    if (catList.length > 0 && catList[0].toLowerCase() !== "all") {
       filter.category = {
         $in: catList.map((cat) => new RegExp(`^${cat.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i")),
       };
+    }
+
+    if (query.difficultyLevel && query.difficultyLevel.toLowerCase() !== "all") {
+      filter.difficulty = query.difficultyLevel;
     }
 
     if (query.search && typeof query.search === "string" && query.search.trim() !== "") {
@@ -95,9 +99,19 @@ export class RecipeService {
     const limit = Math.max(1, Number(query.limit || "6"));
     const skip = (page - 1) * limit;
 
+    const sortConfig: any = {};
+    if (query.sortBy === "likesCount" || query.sortBy === "likes") {
+      sortConfig.likes = query.sortOrder === "asc" ? 1 : -1;
+    } else if (query.sortBy === "title") {
+      sortConfig.title = query.sortOrder === "desc" ? -1 : 1;
+    } else {
+      // Default to createdAt desc (newest)
+      sortConfig.createdAt = query.sortOrder === "asc" ? 1 : -1;
+    }
+
     const pipeline: any[] = [
       { $match: filter },
-      { $sort: { createdAt: -1 } },
+      { $sort: sortConfig },
       {
         $facet: {
           data: [{ $skip: skip }, { $limit: limit }],

@@ -78,7 +78,7 @@ export class RecipeController {
    */
   static async getRecipes(req: Request, res: Response): Promise<void> {
     try {
-      const { category, categories, page, limit, search } = req.query;
+      const { category, categories, page, limit, search, difficultyLevel, sortBy, sortOrder } = req.query;
 
       const result = await RecipeService.getRecipes({
         category: category as any,
@@ -86,6 +86,9 @@ export class RecipeController {
         page: page as string,
         limit: limit as string,
         search: search as string,
+        difficultyLevel: difficultyLevel as string,
+        sortBy: sortBy as string,
+        sortOrder: sortOrder as string,
       });
 
       res.status(200).json(result);

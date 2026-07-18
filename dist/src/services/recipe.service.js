@@ -58,10 +58,13 @@ class RecipeService {
             catList = rawCategories.split(",").map((c) => c.trim()).filter(Boolean);
         }
         const filter = {};
-        if (catList.length > 0) {
+        if (catList.length > 0 && catList[0].toLowerCase() !== "all") {
             filter.category = {
                 $in: catList.map((cat) => new RegExp(`^${cat.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i")),
             };
+        }
+        if (query.difficultyLevel && query.difficultyLevel.toLowerCase() !== "all") {
+            filter.difficulty = query.difficultyLevel;
         }
         if (query.search && typeof query.search === "string" && query.search.trim() !== "") {
             const regex = new RegExp(query.search.trim(), "i");
@@ -70,9 +73,20 @@ class RecipeService {
         const page = Math.max(1, Number(query.page || "1"));
         const limit = Math.max(1, Number(query.limit || "6"));
         const skip = (page - 1) * limit;
+        const sortConfig = {};
+        if (query.sortBy === "likesCount" || query.sortBy === "likes") {
+            sortConfig.likes = query.sortOrder === "asc" ? 1 : -1;
+        }
+        else if (query.sortBy === "title") {
+            sortConfig.title = query.sortOrder === "desc" ? -1 : 1;
+        }
+        else {
+            // Default to createdAt desc (newest)
+            sortConfig.createdAt = query.sortOrder === "asc" ? 1 : -1;
+        }
         const pipeline = [
             { $match: filter },
-            { $sort: { createdAt: -1 } },
+            { $sort: sortConfig },
             {
                 $facet: {
                     data: [{ $skip: skip }, { $limit: limit }],
