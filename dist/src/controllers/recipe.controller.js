@@ -1,0 +1,192 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.RecipeController = void 0;
+const recipe_service_1 = require("../services/recipe.service");
+const rating_service_1 = require("../services/rating.service");
+class RecipeController {
+    /**
+     * Controller for recipe creation.
+     */
+    static async createRecipe(req, res) {
+        try {
+            const user = req.user; // Appended by verifyToken middleware
+            if (!user) {
+                res.status(401).json({ error: "Unauthorized. User session not found." });
+                return;
+            }
+            const { recipeName, title, recipeImage, image, category, cuisineType, difficultyLevel, difficulty, preparationTime, prepTime, ingredients, instructions, price, status, } = req.body;
+            const finalRecipeName = recipeName || title;
+            const finalRecipeImage = recipeImage || image || "";
+            if (!finalRecipeName || !ingredients || !instructions) {
+                res.status(400).json({ error: "Missing required fields (recipeName, ingredients, instructions)." });
+                return;
+            }
+            const recipeInput = {
+                title: finalRecipeName,
+                description: req.body.description || "",
+                image: finalRecipeImage,
+                category: category || "Other",
+                cuisineType: cuisineType || "International",
+                difficulty: (difficultyLevel || difficulty || "Easy"),
+                prepTime: preparationTime || prepTime || "15 mins",
+                cookTime: req.body.cookTime || "20 mins",
+                ingredients,
+                instructions,
+                authorId: user.id,
+                author: user.email ? user.email.split("@")[0] : "Home Chef",
+                authorEmail: user.email || "",
+                price: price ? Number(price) : undefined,
+                status: status || "published",
+            };
+            const newRecipe = await recipe_service_1.RecipeService.createRecipe(user.id, recipeInput);
+            res.status(201).json({ message: "Recipe created successfully.", recipe: newRecipe });
+        }
+        catch (error) {
+            if (error.message === "LIMIT_EXCEEDED") {
+                res.status(403).json({
+                    error: "Recipe creation limit reached. Free accounts can only publish up to 2 recipes. Upgrade to Premium to unlock unlimited creations.",
+                });
+                return;
+            }
+            console.error("Create Recipe Controller Error:", error);
+            res.status(500).json({ error: "Internal server error during recipe creation." });
+        }
+    }
+    /**
+     * Controller to get all recipes with server-side pagination & category filtering.
+     */
+    static async getRecipes(req, res) {
+        try {
+            const { category, categories, page, limit, search } = req.query;
+            const result = await recipe_service_1.RecipeService.getRecipes({
+                category: category,
+                categories: categories,
+                page: page,
+                limit: limit,
+                search: search,
+            });
+            res.status(200).json(result);
+        }
+        catch (error) {
+            console.error("Get Recipes Controller Error:", error);
+            res.status(500).json({ error: "Internal server error during recipe retrieval." });
+        }
+    }
+    /**
+     * Controller to get single recipe by ID.
+     */
+    static async getRecipeById(req, res) {
+        try {
+            const id = req.params.id;
+            const recipe = await recipe_service_1.RecipeService.getRecipeById(id);
+            res.status(200).json({ recipe });
+        }
+        catch (error) {
+            if (error.message === "INVALID_ID") {
+                res.status(400).json({ error: "Invalid recipe ID format." });
+                return;
+            }
+            if (error.message === "NOT_FOUND") {
+                res.status(404).json({ error: "Recipe not found." });
+                return;
+            }
+            console.error("Get Recipe By ID Controller Error:", error);
+            res.status(500).json({ error: "Internal server error during recipe lookup." });
+        }
+    }
+    /**
+     * Controller to update a recipe.
+     */
+    static async updateRecipe(req, res) {
+        try {
+            const id = req.params.id;
+            const user = req.user;
+            if (!user) {
+                res.status(401).json({ error: "Unauthorized. User session not found." });
+                return;
+            }
+            const updated = await recipe_service_1.RecipeService.updateRecipe(id, user.id, user.role, req.body);
+            res.status(200).json({ message: "Recipe updated successfully.", recipe: updated });
+        }
+        catch (error) {
+            if (error.message === "INVALID_ID") {
+                res.status(400).json({ error: "Invalid recipe ID format." });
+                return;
+            }
+            if (error.message === "NOT_FOUND") {
+                res.status(404).json({ error: "Recipe not found." });
+                return;
+            }
+            if (error.message === "UNAUTHORIZED") {
+                res.status(403).json({ error: "Forbidden. You are not authorized to update this recipe." });
+                return;
+            }
+            console.error("Update Recipe Controller Error:", error);
+            res.status(500).json({ error: "Internal server error during recipe update." });
+        }
+    }
+    /**
+     * Controller to delete a recipe.
+     */
+    static async deleteRecipe(req, res) {
+        try {
+            const id = req.params.id;
+            const user = req.user;
+            if (!user) {
+                res.status(401).json({ error: "Unauthorized. User session not found." });
+                return;
+            }
+            await recipe_service_1.RecipeService.deleteRecipe(id, user.id, user.role);
+            res.status(200).json({ message: "Recipe deleted successfully." });
+        }
+        catch (error) {
+            if (error.message === "INVALID_ID") {
+                res.status(400).json({ error: "Invalid recipe ID format." });
+                return;
+            }
+            if (error.message === "NOT_FOUND") {
+                res.status(404).json({ error: "Recipe not found." });
+                return;
+            }
+            if (error.message === "UNAUTHORIZED") {
+                res.status(403).json({ error: "Forbidden. You are not authorized to delete this recipe." });
+                return;
+            }
+            console.error("Delete Recipe Controller Error:", error);
+            res.status(500).json({ error: "Internal server error during recipe deletion." });
+        }
+    }
+    /**
+     * Controller to rate a recipe.
+     */
+    static async rateRecipe(req, res) {
+        try {
+            const user = req.user;
+            if (!user) {
+                res.status(401).json({ error: "Unauthorized. User session required." });
+                return;
+            }
+            const recipeId = req.params.id;
+            const { score } = req.body;
+            if (!score || typeof score !== "number") {
+                res.status(400).json({ error: "Invalid rating score. Provide a number between 1 and 5." });
+                return;
+            }
+            const result = await rating_service_1.RatingService.rateRecipe(user.id, recipeId, score);
+            res.status(200).json({ message: "Rating submitted successfully.", data: result });
+        }
+        catch (error) {
+            if (error.message === "INVALID_SCORE") {
+                res.status(400).json({ error: "Rating score must be between 1 and 5 stars." });
+                return;
+            }
+            if (error.message === "NOT_FOUND") {
+                res.status(404).json({ error: "Recipe not found." });
+                return;
+            }
+            console.error("Rate Recipe Controller Error:", error);
+            res.status(500).json({ error: "Internal server error during recipe rating submission." });
+        }
+    }
+}
+exports.RecipeController = RecipeController;

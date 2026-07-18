@@ -41,16 +41,18 @@ export class RecipeController {
       }
 
       const recipeInput = {
-        recipeName: finalRecipeName,
-        recipeImage: finalRecipeImage,
+        title: finalRecipeName,
+        description: req.body.description || "",
+        image: finalRecipeImage,
         category: category || "Other",
         cuisineType: cuisineType || "International",
-        difficultyLevel: (difficultyLevel || difficulty || "Easy") as "Easy" | "Medium" | "Hard",
-        preparationTime: preparationTime || prepTime || "15 mins",
+        difficulty: (difficultyLevel || difficulty || "Easy") as "Easy" | "Medium" | "Hard",
+        prepTime: preparationTime || prepTime || "15 mins",
+        cookTime: req.body.cookTime || "20 mins",
         ingredients,
         instructions,
         authorId: user.id,
-        authorName: user.email ? user.email.split("@")[0] : "Home Chef",
+        author: user.email ? user.email.split("@")[0] : "Home Chef",
         authorEmail: user.email || "",
         price: price ? Number(price) : undefined,
         status: status || "published",

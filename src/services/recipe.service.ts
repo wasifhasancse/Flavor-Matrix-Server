@@ -3,16 +3,18 @@ import { collections } from "../config/db";
 import { RecipeDoc } from "../types/database";
 
 export interface CreateRecipeInput {
-  recipeName: string;
-  recipeImage: string;
+  title: string;
+  description: string;
+  image: string;
   category: string;
   cuisineType: string;
-  difficultyLevel: "Easy" | "Medium" | "Hard";
-  preparationTime: string;
+  difficulty: "Easy" | "Medium" | "Hard";
+  prepTime: string;
+  cookTime: string;
   ingredients: string[];
   instructions: string[];
   authorId: string;
-  authorName: string;
+  author: string;
   authorEmail: string;
   price?: number;
   status?: "published" | "draft" | "pending" | "archived";
@@ -39,18 +41,20 @@ export class RecipeService {
     // 3. Save recipe document to MongoDB with database architecture schema
     const now = new Date();
     const doc: RecipeDoc = {
-      recipeName: input.recipeName,
-      recipeImage: input.recipeImage,
+      title: input.title,
+      description: input.description || "",
+      image: input.image,
       category: input.category,
       cuisineType: input.cuisineType || "International",
-      difficultyLevel: input.difficultyLevel || "Easy",
-      preparationTime: input.preparationTime || "15 mins",
+      difficulty: input.difficulty || "Easy",
+      prepTime: input.prepTime || "15 mins",
+      cookTime: input.cookTime || "20 mins",
       ingredients: input.ingredients,
       instructions: input.instructions,
       authorId: input.authorId,
-      authorName: input.authorName,
+      author: input.author,
       authorEmail: input.authorEmail,
-      likesCount: 0,
+      likes: 0,
       isFeatured: false,
       status: input.status || "published",
       price: input.price ? Number(input.price) : undefined,
@@ -84,7 +88,7 @@ export class RecipeService {
 
     if (query.search && typeof query.search === "string" && query.search.trim() !== "") {
       const regex = new RegExp(query.search.trim(), "i");
-      filter.$or = [{ recipeName: regex }, { title: regex }, { authorName: regex }, { authorEmail: regex }];
+      filter.$or = [{ title: regex }, { author: regex }, { authorEmail: regex }];
     }
 
     const page = Math.max(1, Number(query.page || "1"));
@@ -159,12 +163,14 @@ export class RecipeService {
 
     const fieldsToSet: any = {};
     const allowedFields: Array<keyof CreateRecipeInput> = [
-      "recipeName",
-      "recipeImage",
+      "title",
+      "description",
+      "image",
       "category",
       "cuisineType",
-      "difficultyLevel",
-      "preparationTime",
+      "difficulty",
+      "prepTime",
+      "cookTime",
       "ingredients",
       "instructions",
       "price",

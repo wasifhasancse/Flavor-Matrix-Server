@@ -1,14 +1,18 @@
 {
   "compilerOptions": {
-    "target": "es2022",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "rootDir": "./src",
-    "outDir": "./dist",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
+    "target": "ES2020",
+    "module": "CommonJS",
+    "lib": ["es2020"],
     "strict": true,
-    "skipLibCheck": true
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "rootDir": "./"
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "index.ts"],
+  "exclude": ["node_modules", "dist"],
+  "ts-node": {
+    "files": true
+  }
 }

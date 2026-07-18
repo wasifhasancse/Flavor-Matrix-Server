@@ -20,18 +20,20 @@ export interface UserDoc {
  */
 export interface RecipeDoc {
   _id?: ObjectId;
-  recipeName: string;
-  recipeImage: string;
+  title: string;
+  description: string;
+  image: string;
   category: string;
   cuisineType: string;
-  difficultyLevel: "Easy" | "Medium" | "Hard";
-  preparationTime: string;
+  difficulty: "Easy" | "Medium" | "Hard";
+  prepTime: string;
+  cookTime: string;
   ingredients: string[];
   instructions: string[];
   authorId: string;
-  authorName: string;
+  author: string;
   authorEmail: string;
-  likesCount: number;
+  likes: number;
   isFeatured: boolean;
   status: "published" | "draft" | "pending" | "archived";
   price?: number;

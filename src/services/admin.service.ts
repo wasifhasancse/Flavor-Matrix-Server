@@ -338,7 +338,7 @@ export class AdminService {
 
     const reports = await collections.reports.find(query).sort({ createdAt: -1 }).toArray();
 
-    return reports.map((r) => ({
+    return reports.map((r: any) => ({
       id: r._id.toString(),
       recipeId: r.recipeId,
       reporterEmail: r.reporterEmail || r.reportedBy || "user@example.com",

@@ -1,0 +1,151 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AdminService = void 0;
+const mongodb_1 = require("mongodb");
+const db_1 = require("../config/db");
+class AdminService {
+    /**
+     * Fetches total aggregates across all collections.
+     */
+    static async getStats() {
+        const [totalUsers, totalRecipes, premiumUsers, activeReports] = await Promise.all([
+            db_1.collections.users.countDocuments({}),
+            db_1.collections.recipes.countDocuments({}),
+            db_1.collections.users.countDocuments({ isPremium: true }),
+            db_1.collections.reports.countDocuments({ status: "pending" }),
+        ]);
+        return {
+            totalUsers,
+            totalRecipes,
+            premiumUsers,
+            activeReports,
+        };
+    }
+    /**
+     * Toggles isBlocked status for a user.
+     */
+    static async toggleUserBlock(userId) {
+        if (!mongodb_1.ObjectId.isValid(userId)) {
+            throw new Error("INVALID_ID");
+        }
+        const user = await db_1.collections.users.findOne({ _id: new mongodb_1.ObjectId(userId) });
+        if (!user) {
+            throw new Error("NOT_FOUND");
+        }
+        const newBlockedState = !user.isBlocked;
+        await db_1.collections.users.updateOne({ _id: new mongodb_1.ObjectId(userId) }, { $set: { isBlocked: newBlockedState, updatedAt: new Date() } });
+        return { id: userId, isBlocked: newBlockedState };
+    }
+    /**
+     * Edits any recipe.
+     */
+    static async editRecipe(recipeId, updateData) {
+        if (!mongodb_1.ObjectId.isValid(recipeId)) {
+            throw new Error("INVALID_ID");
+        }
+        const recipe = await db_1.collections.recipes.findOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        if (!recipe) {
+            throw new Error("NOT_FOUND");
+        }
+        const cleanUpdate = {};
+        const allowedKeys = [
+            "title",
+            "description",
+            "image",
+            "prepTime",
+            "cookTime",
+            "difficulty",
+            "category",
+            "ingredients",
+            "instructions",
+            "price",
+            "isFeatured",
+        ];
+        allowedKeys.forEach((key) => {
+            if (updateData[key] !== undefined) {
+                cleanUpdate[key] = updateData[key];
+            }
+        });
+        cleanUpdate.updatedAt = new Date();
+        await db_1.collections.recipes.updateOne({ _id: new mongodb_1.ObjectId(recipeId) }, { $set: cleanUpdate });
+        return { ...recipe, ...cleanUpdate };
+    }
+    /**
+     * Deletes any recipe.
+     */
+    static async deleteRecipe(recipeId) {
+        if (!mongodb_1.ObjectId.isValid(recipeId)) {
+            throw new Error("INVALID_ID");
+        }
+        const recipe = await db_1.collections.recipes.findOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        if (!recipe) {
+            throw new Error("NOT_FOUND");
+        }
+        await db_1.collections.recipes.deleteOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        // Auto-resolve corresponding reports
+        await db_1.collections.reports.updateMany({ recipeId: recipeId }, { $set: { status: "resolved", updatedAt: new Date() } });
+        return { success: true };
+    }
+    /**
+     * Toggles isFeatured status of a recipe.
+     */
+    static async toggleFeaturedRecipe(recipeId) {
+        if (!mongodb_1.ObjectId.isValid(recipeId)) {
+            throw new Error("INVALID_ID");
+        }
+        const recipe = await db_1.collections.recipes.findOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        if (!recipe) {
+            throw new Error("NOT_FOUND");
+        }
+        const newFeaturedState = !recipe.isFeatured;
+        await db_1.collections.recipes.updateOne({ _id: new mongodb_1.ObjectId(recipeId) }, { $set: { isFeatured: newFeaturedState, updatedAt: new Date() } });
+        return { id: recipeId, isFeatured: newFeaturedState };
+    }
+    /**
+     * Lists all moderation reports.
+     */
+    static async listReports() {
+        return await db_1.collections.reports.find({}).sort({ createdAt: -1 }).toArray();
+    }
+    /**
+     * Toggles report status between 'pending' and 'resolved'.
+     */
+    static async toggleReportStatus(reportId) {
+        if (!mongodb_1.ObjectId.isValid(reportId)) {
+            throw new Error("INVALID_ID");
+        }
+        const report = await db_1.collections.reports.findOne({ _id: new mongodb_1.ObjectId(reportId) });
+        if (!report) {
+            throw new Error("NOT_FOUND");
+        }
+        const nextStatus = report.status === "pending" ? "resolved" : "pending";
+        await db_1.collections.reports.updateOne({ _id: new mongodb_1.ObjectId(reportId) }, { $set: { status: nextStatus, updatedAt: new Date() } });
+        return { id: reportId, status: nextStatus };
+    }
+    /**
+     * Deletes the reported recipe associated with a report, and resolves the report.
+     */
+    static async deleteReportedRecipe(reportId) {
+        if (!mongodb_1.ObjectId.isValid(reportId)) {
+            throw new Error("INVALID_ID");
+        }
+        const report = await db_1.collections.reports.findOne({ _id: new mongodb_1.ObjectId(reportId) });
+        if (!report) {
+            throw new Error("NOT_FOUND");
+        }
+        const recipeId = report.recipeId;
+        if (mongodb_1.ObjectId.isValid(recipeId)) {
+            await db_1.collections.recipes.deleteOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        }
+        // Resolve this report and all other reports for this recipe
+        await db_1.collections.reports.updateMany({ recipeId: recipeId }, { $set: { status: "resolved", updatedAt: new Date() } });
+        return { success: true };
+    }
+    /**
+     * Lists all transactions.
+     */
+    static async listTransactions() {
+        return await db_1.collections.payments.find({}).sort({ createdAt: -1 }).toArray();
+    }
+}
+exports.AdminService = AdminService;
