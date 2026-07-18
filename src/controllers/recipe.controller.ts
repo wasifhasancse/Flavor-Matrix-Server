@@ -15,36 +15,44 @@ export class RecipeController {
       }
 
       const {
+        recipeName,
         title,
-        description,
+        recipeImage,
         image,
-        prepTime,
-        cookTime,
-        difficulty,
         category,
+        cuisineType,
+        difficultyLevel,
+        difficulty,
+        preparationTime,
+        prepTime,
         ingredients,
         instructions,
         price,
+        status,
       } = req.body;
 
-      if (!title || !description || !ingredients || !instructions) {
-        res.status(400).json({ error: "Missing required fields (title, description, ingredients, instructions)." });
+      const finalRecipeName = recipeName || title;
+      const finalRecipeImage = recipeImage || image || "";
+
+      if (!finalRecipeName || !ingredients || !instructions) {
+        res.status(400).json({ error: "Missing required fields (recipeName, ingredients, instructions)." });
         return;
       }
 
       const recipeInput = {
-        title,
-        description,
-        image: image || "",
-        prepTime: prepTime || "10 mins",
-        cookTime: cookTime || "15 mins",
-        difficulty: difficulty || "Easy",
+        recipeName: finalRecipeName,
+        recipeImage: finalRecipeImage,
         category: category || "Other",
+        cuisineType: cuisineType || "International",
+        difficultyLevel: (difficultyLevel || difficulty || "Easy") as "Easy" | "Medium" | "Hard",
+        preparationTime: preparationTime || prepTime || "15 mins",
         ingredients,
         instructions,
-        price: price ? Number(price) : undefined,
         authorId: user.id,
-        author: user.email.split("@")[0] || "Home Chef",
+        authorName: user.email ? user.email.split("@")[0] : "Home Chef",
+        authorEmail: user.email || "",
+        price: price ? Number(price) : undefined,
+        status: status || "published",
       };
 
       const newRecipe = await RecipeService.createRecipe(user.id, recipeInput);

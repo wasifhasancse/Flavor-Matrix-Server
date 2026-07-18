@@ -49,7 +49,7 @@ export class InteractionController {
         return;
       }
 
-      const result = await InteractionService.toggleFavorite(user.id, recipeId);
+      const result = await InteractionService.toggleFavorite(user.id, user.email, recipeId);
       
       if (result.favorited) {
         res.status(200).json({ message: "Recipe added to favorites.", favorited: true });

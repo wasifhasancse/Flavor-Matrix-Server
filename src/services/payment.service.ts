@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { ObjectId } from "mongodb";
 import { collections } from "../config/db";
+import { PaymentDoc } from "../types/database";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "sk_test_placeholder";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "whsec_placeholder";
@@ -9,14 +10,13 @@ const stripe = new Stripe(STRIPE_SECRET_KEY);
 
 export class PaymentService {
   /**
-   * Creates a Checkout Session for upgrading a user to Premium Membership.
+   * Creates a Checkout Session for upgrading a user to Premium.
    */
   static async createMembershipSession(userId: string, successUrl: string, cancelUrl: string): Promise<string> {
     if (!ObjectId.isValid(userId)) {
       throw new Error("INVALID_USER_ID");
     }
 
-    // Confirm user exists
     const user = await collections.users.findOne({ _id: new ObjectId(userId) });
     if (!user) {
       throw new Error("USER_NOT_FOUND");
@@ -30,9 +30,9 @@ export class PaymentService {
             currency: "usd",
             product_data: {
               name: "Lifetime Premium Membership",
-              description: "Unlimited recipe publishing and exclusive recipe access on Flavor Matrix.",
+              description: "Unlimited recipe creation and exclusive access on Flavor Matrix.",
             },
-            unit_amount: 1999, // $19.99 in cents
+            unit_amount: 1999, // $19.99
           },
           quantity: 1,
         },
@@ -41,6 +41,7 @@ export class PaymentService {
       metadata: {
         type: "membership_upgrade",
         userId,
+        userEmail: user.email,
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
@@ -69,13 +70,11 @@ export class PaymentService {
       throw new Error("INVALID_RECIPE_ID");
     }
 
-    // Confirm user exists
     const user = await collections.users.findOne({ _id: new ObjectId(userId) });
     if (!user) {
       throw new Error("USER_NOT_FOUND");
     }
 
-    // Confirm recipe exists and requires purchasing
     const recipe = await collections.recipes.findOne({ _id: new ObjectId(recipeId) });
     if (!recipe) {
       throw new Error("RECIPE_NOT_FOUND");
@@ -93,10 +92,10 @@ export class PaymentService {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `Recipe: ${recipe.title}`,
+              name: `Recipe: ${recipe.recipeName || recipe.title}`,
               description: `Purchase access to premium recipe instructions.`,
             },
-            unit_amount: Math.round(price * 100), // Convert to cents
+            unit_amount: Math.round(price * 100),
           },
           quantity: 1,
         },
@@ -105,6 +104,7 @@ export class PaymentService {
       metadata: {
         type: "recipe_purchase",
         userId,
+        userEmail: user.email,
         recipeId,
       },
       success_url: successUrl,
@@ -119,7 +119,8 @@ export class PaymentService {
   }
 
   /**
-   * Handles secure Stripe webhooks.
+   * Handles secure Stripe webhooks and records successful payment documents.
+   * Follows Payment Schema: userEmail, userId, amount, recipeId, transactionId, paymentStatus, paidAt.
    */
   static async handleWebhook(rawBody: Buffer, signature: string): Promise<void> {
     let event: Stripe.Event;
@@ -131,7 +132,6 @@ export class PaymentService {
       throw new Error("SIGNATURE_VERIFICATION_FAILED");
     }
 
-    // Capture checkout session completed
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       const metadata = session.metadata;
@@ -141,29 +141,41 @@ export class PaymentService {
         return;
       }
 
-      const { type, userId, recipeId } = metadata;
+      const { type, userId, userEmail, recipeId } = metadata;
+      const now = new Date();
 
       if (type === "membership_upgrade" && userId) {
         // Upgrade user status in 'users' collection
         console.log(`[Stripe Webhook] Upgrading user ${userId} to Premium status.`);
         await collections.users.updateOne(
           { _id: new ObjectId(userId) },
-          { $set: { isPremium: true, updatedAt: new Date() } }
+          { $set: { isPremium: true, updatedAt: now } }
         );
-      } else if (type === "recipe_purchase" && userId && recipeId) {
-        // Log transaction in 'payments' collection
-        console.log(`[Stripe Webhook] Logging payment of recipe ${recipeId} for user ${userId}.`);
-        await collections.payments.insertOne({
+
+        // Record payment in 'payments' collection according to database architecture
+        const paymentDoc: PaymentDoc = {
+          userEmail: userEmail || session.customer_details?.email || "unknown@example.com",
           userId,
-          recipeId,
-          amount: (session.amount_total || 0) / 100, // back to USD
-          currency: session.currency || "usd",
+          amount: (session.amount_total || 0) / 100,
+          recipeId: "MEMBERSHIP_UPGRADE",
           transactionId: session.id,
-          status: "completed",
-          createdAt: new Date(),
-        });
-      } else {
-        console.warn(`[Stripe Webhook] Unrecognized checkout metadata combination:`, metadata);
+          paymentStatus: "succeeded",
+          paidAt: now,
+        };
+        await collections.payments.insertOne(paymentDoc);
+      } else if (type === "recipe_purchase" && userId && recipeId) {
+        // Record payment in 'payments' collection according to database architecture
+        console.log(`[Stripe Webhook] Logging recipe payment ${recipeId} for user ${userId}.`);
+        const paymentDoc: PaymentDoc = {
+          userEmail: userEmail || session.customer_details?.email || "unknown@example.com",
+          userId,
+          amount: (session.amount_total || 0) / 100,
+          recipeId,
+          transactionId: session.id,
+          paymentStatus: "succeeded",
+          paidAt: now,
+        };
+        await collections.payments.insertOne(paymentDoc);
       }
     }
   }

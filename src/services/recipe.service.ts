@@ -1,27 +1,29 @@
 import { ObjectId } from "mongodb";
 import { collections } from "../config/db";
+import { RecipeDoc } from "../types/database";
 
 export interface CreateRecipeInput {
-  title: string;
-  description: string;
-  image: string;
-  prepTime: string;
-  cookTime: string;
-  difficulty: "Easy" | "Medium" | "Hard";
+  recipeName: string;
+  recipeImage: string;
   category: string;
+  cuisineType: string;
+  difficultyLevel: "Easy" | "Medium" | "Hard";
+  preparationTime: string;
   ingredients: string[];
   instructions: string[];
-  price?: number;
   authorId: string;
-  author: string;
+  authorName: string;
+  authorEmail: string;
+  price?: number;
+  status?: "published" | "draft" | "pending" | "archived";
 }
 
 export class RecipeService {
   /**
-   * Creates a new recipe.
+   * Creates a new recipe following the required Database Architecture.
    * Enforces a 2-recipe limit for free (non-premium) users.
    */
-  static async createRecipe(userId: string, input: CreateRecipeInput) {
+  static async createRecipe(userId: string, input: CreateRecipeInput): Promise<RecipeDoc> {
     // 1. Fetch user to check premium status
     const user = await collections.users.findOne({ _id: new ObjectId(userId) });
     const isPremium = user?.isPremium || false;
@@ -34,12 +36,26 @@ export class RecipeService {
       }
     }
 
-    // 3. Save recipe to database
-    const doc = {
-      ...input,
-      likes: 0,
+    // 3. Save recipe document to MongoDB with database architecture schema
+    const now = new Date();
+    const doc: RecipeDoc = {
+      recipeName: input.recipeName,
+      recipeImage: input.recipeImage,
+      category: input.category,
+      cuisineType: input.cuisineType || "International",
+      difficultyLevel: input.difficultyLevel || "Easy",
+      preparationTime: input.preparationTime || "15 mins",
+      ingredients: input.ingredients,
+      instructions: input.instructions,
+      authorId: input.authorId,
+      authorName: input.authorName,
+      authorEmail: input.authorEmail,
+      likesCount: 0,
       isFeatured: false,
-      createdAt: new Date(),
+      status: input.status || "published",
+      price: input.price ? Number(input.price) : undefined,
+      createdAt: now,
+      updatedAt: now,
     };
 
     const result = await collections.recipes.insertOne(doc);
@@ -47,12 +63,11 @@ export class RecipeService {
   }
 
   /**
-   * Retrieves recipes with server-side pagination and category filtering ($in).
+   * Retrieves recipes with pagination & category filter.
    */
   static async getRecipes(query: { category?: string; page?: string; limit?: string }) {
     const filter: any = {};
 
-    // Category filtering utilizing $in
     if (query.category) {
       const catList = query.category.split(",").map((c) => c.trim()).filter((c) => c.length > 0);
       if (catList.length > 0) {
@@ -118,23 +133,22 @@ export class RecipeService {
       throw new Error("NOT_FOUND");
     }
 
-    // Authorization check: Only author or admin can update
     if (recipe.authorId !== userId && role !== "admin") {
       throw new Error("UNAUTHORIZED");
     }
 
     const fieldsToSet: any = {};
     const allowedFields: Array<keyof CreateRecipeInput> = [
-      "title",
-      "description",
-      "image",
-      "prepTime",
-      "cookTime",
-      "difficulty",
+      "recipeName",
+      "recipeImage",
       "category",
+      "cuisineType",
+      "difficultyLevel",
+      "preparationTime",
       "ingredients",
       "instructions",
       "price",
+      "status",
     ];
 
     allowedFields.forEach((field) => {
@@ -146,7 +160,7 @@ export class RecipeService {
     fieldsToSet.updatedAt = new Date();
 
     await collections.recipes.updateOne({ _id: new ObjectId(id) }, { $set: fieldsToSet });
-    
+
     return { ...recipe, ...fieldsToSet };
   }
 
@@ -163,7 +177,6 @@ export class RecipeService {
       throw new Error("NOT_FOUND");
     }
 
-    // Authorization check: Only author or admin can delete
     if (recipe.authorId !== userId && role !== "admin") {
       throw new Error("UNAUTHORIZED");
     }
