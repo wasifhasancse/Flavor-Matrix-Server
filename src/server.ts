@@ -6,6 +6,8 @@ import { recipesRouter } from "./routes/recipes";
 import { interactionsRouter } from "./routes/interactions";
 import { paymentsRouter } from "./routes/payments";
 import { adminRouter } from "./routes/admin";
+import { bookmarksRouter } from "./routes/bookmarks";
+import { analyticsRouter } from "./routes/analytics";
 
 dotenv.config();
 
@@ -61,6 +63,12 @@ app.use("/api/recipes", recipesRouter);
 
 // Recipe Interactions Routes
 app.use("/api/interactions", interactionsRouter);
+
+// User Bookmarks Routes
+app.use("/api/bookmarks", bookmarksRouter);
+
+// Author Analytics Routes
+app.use("/api/analytics", analyticsRouter);
 
 // Stripe Payments Routes
 app.use("/api/payments", paymentsRouter);

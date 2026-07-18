@@ -67,5 +67,11 @@ export const collections = {
   },
   get payments(): Collection {
     return getDB().collection("payments");
+  },
+  get bookmarks(): Collection {
+    return getDB().collection("bookmarks");
+  },
+  get ratings(): Collection {
+    return getDB().collection("ratings");
   }
 };

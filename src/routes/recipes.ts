@@ -12,5 +12,6 @@ router.get("/:id", RecipeController.getRecipeById);
 router.post("/", verifyToken as any, RecipeController.createRecipe);
 router.put("/:id", verifyToken as any, RecipeController.updateRecipe);
 router.delete("/:id", verifyToken as any, RecipeController.deleteRecipe);
+router.post("/:id/rate", verifyToken as any, RecipeController.rateRecipe);
 
 export const recipesRouter = router;

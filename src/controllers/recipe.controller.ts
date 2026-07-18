@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { RecipeService } from "../services/recipe.service";
+import { RatingService } from "../services/rating.service";
 
 export class RecipeController {
   /**
@@ -180,6 +181,42 @@ export class RecipeController {
 
       console.error("Delete Recipe Controller Error:", error);
       res.status(500).json({ error: "Internal server error during recipe deletion." });
+    }
+  }
+
+  /**
+   * Controller to rate a recipe.
+   */
+  static async rateRecipe(req: Request, res: Response): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) {
+        res.status(401).json({ error: "Unauthorized. User session required." });
+        return;
+      }
+
+      const recipeId = req.params.id as string;
+      const { score } = req.body;
+
+      if (!score || typeof score !== "number") {
+        res.status(400).json({ error: "Invalid rating score. Provide a number between 1 and 5." });
+        return;
+      }
+
+      const result = await RatingService.rateRecipe(user.id, recipeId, score);
+      res.status(200).json({ message: "Rating submitted successfully.", data: result });
+    } catch (error: any) {
+      if (error.message === "INVALID_SCORE") {
+        res.status(400).json({ error: "Rating score must be between 1 and 5 stars." });
+        return;
+      }
+      if (error.message === "NOT_FOUND") {
+        res.status(404).json({ error: "Recipe not found." });
+        return;
+      }
+
+      console.error("Rate Recipe Controller Error:", error);
+      res.status(500).json({ error: "Internal server error during recipe rating submission." });
     }
   }
 }
