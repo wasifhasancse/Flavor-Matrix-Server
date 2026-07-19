@@ -108,7 +108,6 @@ export class RecipeService {
     limit?: string;
     search?: string;
     difficultyLevel?: string;
-    difficultyLevel?: string;
     sortBy?: string;
     sortOrder?: string;
     authorId?: string;
