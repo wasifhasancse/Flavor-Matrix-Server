@@ -54,7 +54,7 @@ Use your culinary expertise to assist the user with recipes, cooking tips, or na
     }
 
     const responseStream = await ai.models.generateContentStream({
-      model: "gemini-1.5-flash", // Using the robust 1.5 flash model
+      model: "gemini-flash-latest", // Using the latest flash model
       contents: contents,
       config: {
         systemInstruction: systemInstruction,
