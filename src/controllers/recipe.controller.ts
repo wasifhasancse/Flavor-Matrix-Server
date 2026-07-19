@@ -107,6 +107,7 @@ export class RecipeController {
         difficultyLevel,
         sortBy,
         sortOrder,
+        authorId,
       } = req.query;
 
       const result = await RecipeService.getRecipes({
@@ -118,6 +119,7 @@ export class RecipeController {
         difficultyLevel: difficultyLevel as string,
         sortBy: sortBy as string,
         sortOrder: sortOrder as string,
+        authorId: authorId as string,
       });
 
       res.status(200).json(result);

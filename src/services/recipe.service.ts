@@ -108,8 +108,10 @@ export class RecipeService {
     limit?: string;
     search?: string;
     difficultyLevel?: string;
+    difficultyLevel?: string;
     sortBy?: string;
     sortOrder?: string;
+    authorId?: string;
   }) {
     const rawCategories = query.categories || query.category;
     let catList: string[] = [];
@@ -165,6 +167,10 @@ export class RecipeService {
           { authorEmail: regex },
         ],
       });
+    }
+
+    if (query.authorId) {
+      matchConditions.push({ authorId: query.authorId });
     }
 
     const filter: any =
