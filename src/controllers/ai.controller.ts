@@ -48,7 +48,7 @@ export const analyzeFoodImage = async (req: Request, res: Response): Promise<voi
 
     // Call Gemini Model
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-flash-latest",
       contents: [
         "You are an expert chef and culinary AI. Analyze this food image and generate a complete recipe for it.",
         {
