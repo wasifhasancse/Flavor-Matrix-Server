@@ -28,6 +28,7 @@ export const collections = {
   withdrawals: db.collection("withdrawals"),
   categories: db.collection("categories"),
   broadcasts: db.collection("broadcasts"),
+  subscriptions: db.collection("subscriptions"),
 };
 
 export { ObjectId };

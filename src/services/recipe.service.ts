@@ -64,7 +64,6 @@ export class RecipeService {
     // "premium" plan is unlimited, so no else block needed.
 
     // 3. Save recipe document to MongoDB with database architecture schema
-    const now = new Date();
     const normalizedStatus =
       input.status || (input.price && input.price > 0 ? "premium" : "free");
     const doc: RecipeDoc = {
