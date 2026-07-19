@@ -28,19 +28,40 @@ export class RecipeService {
     userId: string,
     input: CreateRecipeInput,
   ): Promise<RecipeDoc> {
-    // 1. Fetch user to check premium status
+    // 1. Fetch user to get their explicit subscription logic
     const user = await collections.users.findOne({ _id: new ObjectId(userId) });
-    const isPremium = user?.isPremium || false;
+    if (!user) {
+      throw new Error("USER_NOT_FOUND");
+    }
 
-    // 2. If user is free, enforce the 2-recipe creation limit
-    if (!isPremium) {
+    const now = new Date();
+    // Lookup active subscription specifically (just like frontend API)
+    const activeSub = await collections.subscriptions.findOne(
+      { userId, status: "active", endDate: { $gt: now } },
+      { sort: { createdAt: -1 } }
+    );
+    
+    const plan = activeSub?.plan || "free";
+
+    // 2. Enforce limits based on the actual plan
+    if (plan === "free") {
       const createdCount = await collections.recipes.countDocuments({
         authorId: userId,
       });
       if (createdCount >= 2) {
-        throw new Error("LIMIT_EXCEEDED");
+        throw new Error("LIMIT_EXCEEDED_FREE");
+      }
+    } else if (plan === "pro") {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const createdCount = await collections.recipes.countDocuments({
+        authorId: userId,
+        createdAt: { $gte: startOfMonth },
+      });
+      if (createdCount >= 10) {
+        throw new Error("LIMIT_EXCEEDED_PRO");
       }
     }
+    // "premium" plan is unlimited, so no else block needed.
 
     // 3. Save recipe document to MongoDB with database architecture schema
     const now = new Date();
