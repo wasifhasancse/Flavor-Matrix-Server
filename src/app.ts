@@ -8,6 +8,7 @@ import { paymentsRouter } from "./routes/payments";
 import { recipesRouter } from "./routes/recipes";
 import { categoriesRouter } from "./routes/categories";
 import aiRouter from "./routes/ai";
+import chatRouter from "./routes/chat";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/recipes", recipesRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/ai", aiRouter);
+app.use("/api/ai/chat", chatRouter);
 
 // Base root endpoint
 app.get("/", (req: Request, res: Response) => {

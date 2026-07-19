@@ -49,9 +49,15 @@ class RecipeController {
                 .json({ message: "Recipe created successfully.", recipe: newRecipe });
         }
         catch (error) {
-            if (error.message === "LIMIT_EXCEEDED") {
+            if (error.message === "LIMIT_EXCEEDED_FREE") {
                 res.status(403).json({
-                    error: "Recipe creation limit reached. Free accounts can only publish up to 2 recipes. Upgrade to Premium to unlock unlimited creations.",
+                    error: "Recipe creation limit reached. Free accounts can only publish up to 2 recipes. Upgrade to Pro or Premium to unlock higher limits!",
+                });
+                return;
+            }
+            if (error.message === "LIMIT_EXCEEDED_PRO") {
+                res.status(403).json({
+                    error: "Recipe creation limit reached. Pro accounts can only publish up to 10 recipes per month. Upgrade to Premium to unlock unlimited creations!",
                 });
                 return;
             }
@@ -66,7 +72,7 @@ class RecipeController {
      */
     static async getRecipes(req, res) {
         try {
-            const { category, categories, page, limit, search, difficultyLevel, sortBy, sortOrder, } = req.query;
+            const { category, categories, page, limit, search, difficultyLevel, sortBy, sortOrder, authorId, } = req.query;
             const result = await recipe_service_1.RecipeService.getRecipes({
                 category: category,
                 categories: categories,
@@ -76,6 +82,7 @@ class RecipeController {
                 difficultyLevel: difficultyLevel,
                 sortBy: sortBy,
                 sortOrder: sortOrder,
+                authorId: authorId,
             });
             res.status(200).json(result);
         }

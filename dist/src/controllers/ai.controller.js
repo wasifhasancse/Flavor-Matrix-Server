@@ -8,10 +8,12 @@ const recipeSchema = {
     type: genai_1.Type.OBJECT,
     properties: {
         recipeName: { type: genai_1.Type.STRING, description: "A catchy name for the recipe based on the image" },
-        category: { type: genai_1.Type.STRING, description: "The likely category: e.g. Breakfast, Dessert, Dinner, Snack, Beverage" },
+        description: { type: genai_1.Type.STRING, description: "A rich, appetizing description of what makes this dish special. Must be at least 50 words long." },
+        category: { type: genai_1.Type.STRING, description: "The likely category based on the image: e.g. Breakfast, Dessert, Dinner, Snack, Beverage" },
         cuisineType: { type: genai_1.Type.STRING, description: "The likely cuisine type: e.g. Italian, Mexican, Indian, American, Japanese" },
-        difficultyLevel: { type: genai_1.Type.STRING, description: "One of: Easy, Medium, Hard" },
-        preparationTime: { type: genai_1.Type.INTEGER, description: "Total preparation and cooking time in minutes" },
+        difficultyLevel: { type: genai_1.Type.STRING, description: "One of: Easy, Medium, Hard (based on visual complexity)" },
+        preparationTime: { type: genai_1.Type.INTEGER, description: "Estimated preparation time (in minutes) based on the image" },
+        cookTime: { type: genai_1.Type.INTEGER, description: "Estimated cooking time (in minutes) based on the image" },
         ingredients: {
             type: genai_1.Type.ARRAY,
             items: { type: genai_1.Type.STRING },
@@ -23,7 +25,7 @@ const recipeSchema = {
             description: "Step-by-step instructions to cook the dish"
         }
     },
-    required: ["recipeName", "category", "cuisineType", "difficultyLevel", "preparationTime", "ingredients", "instructions"]
+    required: ["recipeName", "description", "category", "cuisineType", "difficultyLevel", "preparationTime", "cookTime", "ingredients", "instructions"]
 };
 const analyzeFoodImage = async (req, res) => {
     try {
@@ -44,9 +46,9 @@ const analyzeFoodImage = async (req, res) => {
         const mimeType = imageResponse.headers.get("content-type") || "image/jpeg";
         // Call Gemini Model
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-flash-latest",
             contents: [
-                "You are an expert chef and culinary AI. Analyze this food image and generate a complete recipe for it.",
+                "You are an expert chef and culinary AI. Analyze this food image carefully. Generate a complete and detailed recipe for it. Ensure the 'description' is a rich, appetizing paragraph of at least 50 words. Accurately guess the Category, Difficulty, Prep Time, and Cook Time strictly based on the visual complexity of the dish.",
                 {
                     inlineData: {
                         data: base64Data,

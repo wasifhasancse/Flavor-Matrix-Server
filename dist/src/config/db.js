@@ -28,4 +28,5 @@ exports.collections = {
     withdrawals: exports.db.collection("withdrawals"),
     categories: exports.db.collection("categories"),
     broadcasts: exports.db.collection("broadcasts"),
+    subscriptions: exports.db.collection("subscriptions"),
 };
