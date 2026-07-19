@@ -10,7 +10,7 @@
     "outDir": "./dist",
     "rootDir": "./"
   },
-  "include": ["src/**/*", "index.ts"],
+  "include": ["src/**/*", "index.ts", "seed.ts"],
   "exclude": ["node_modules", "dist"],
   "ts-node": {
     "files": true
