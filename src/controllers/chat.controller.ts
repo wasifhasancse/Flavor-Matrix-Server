@@ -54,7 +54,7 @@ Use your culinary expertise to assist the user with recipes, cooking tips, or na
     }
 
     const responseStream = await ai.models.generateContentStream({
-      model: "gemini-2.5-flash", // Using the robust 2.5 flash model
+      model: "gemini-1.5-flash", // Using the robust 1.5 flash model
       contents: contents,
       config: {
         systemInstruction: systemInstruction,
@@ -76,7 +76,7 @@ Use your culinary expertise to assist the user with recipes, cooking tips, or na
     console.error("AI Chat Streaming Error:", error);
     // If headers are already sent, we can't send a 500 status code
     if (!res.headersSent) {
-      res.status(500).json({ success: false, error: "Failed to generate chat stream." });
+      res.status(500).json({ success: false, error: "Failed to generate chat stream.", details: error.message, stack: error.stack });
     } else {
       res.write(`data: ${JSON.stringify({ error: "An error occurred during generation." })}\n\n`);
       res.end();
