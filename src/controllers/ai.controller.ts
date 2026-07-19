@@ -8,6 +8,7 @@ const recipeSchema: Schema = {
   type: Type.OBJECT,
   properties: {
     recipeName: { type: Type.STRING, description: "A catchy name for the recipe based on the image" },
+    description: { type: Type.STRING, description: "A short, appetizing description of what makes this dish special" },
     category: { type: Type.STRING, description: "The likely category: e.g. Breakfast, Dessert, Dinner, Snack, Beverage" },
     cuisineType: { type: Type.STRING, description: "The likely cuisine type: e.g. Italian, Mexican, Indian, American, Japanese" },
     difficultyLevel: { type: Type.STRING, description: "One of: Easy, Medium, Hard" },
@@ -23,7 +24,7 @@ const recipeSchema: Schema = {
       description: "Step-by-step instructions to cook the dish"
     }
   },
-  required: ["recipeName", "category", "cuisineType", "difficultyLevel", "preparationTime", "ingredients", "instructions"]
+  required: ["recipeName", "description", "category", "cuisineType", "difficultyLevel", "preparationTime", "ingredients", "instructions"]
 };
 
 export const analyzeFoodImage = async (req: Request, res: Response): Promise<void> => {
