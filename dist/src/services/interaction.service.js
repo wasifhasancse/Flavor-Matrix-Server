@@ -11,12 +11,14 @@ class InteractionService {
         if (!mongodb_1.ObjectId.isValid(recipeId)) {
             throw new Error("INVALID_ID");
         }
-        const recipe = await db_1.collections.recipes.findOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        const recipe = await db_1.collections.recipes.findOne({
+            _id: new mongodb_1.ObjectId(recipeId),
+        });
         if (!recipe) {
             throw new Error("NOT_FOUND");
         }
         // Increment likesCount field as per DB architecture
-        await db_1.collections.recipes.updateOne({ _id: new mongodb_1.ObjectId(recipeId) }, { $inc: { likesCount: 1 } });
+        await db_1.collections.recipes.updateOne({ _id: new mongodb_1.ObjectId(recipeId) }, { $inc: { likesCount: 1, likes: 1 } });
         return { likesCount: (recipe.likesCount || recipe.likes || 0) + 1 };
     }
     /**
@@ -27,7 +29,9 @@ class InteractionService {
         if (!mongodb_1.ObjectId.isValid(recipeId)) {
             throw new Error("INVALID_ID");
         }
-        const recipe = await db_1.collections.recipes.findOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        const recipe = await db_1.collections.recipes.findOne({
+            _id: new mongodb_1.ObjectId(recipeId),
+        });
         if (!recipe) {
             throw new Error("NOT_FOUND");
         }
@@ -47,7 +51,10 @@ class InteractionService {
                 addedAt: new Date(),
             };
             const result = await db_1.collections.favorites.insertOne(favDoc);
-            return { favorited: true, favorite: { ...favDoc, _id: result.insertedId } };
+            return {
+                favorited: true,
+                favorite: { ...favDoc, _id: result.insertedId },
+            };
         }
     }
     /**
@@ -58,7 +65,9 @@ class InteractionService {
         if (!mongodb_1.ObjectId.isValid(recipeId)) {
             throw new Error("INVALID_ID");
         }
-        const recipe = await db_1.collections.recipes.findOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        const recipe = await db_1.collections.recipes.findOne({
+            _id: new mongodb_1.ObjectId(recipeId),
+        });
         if (!recipe) {
             throw new Error("NOT_FOUND");
         }

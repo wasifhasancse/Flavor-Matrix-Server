@@ -6,6 +6,8 @@ import { bookmarksRouter } from "./routes/bookmarks";
 import { interactionsRouter } from "./routes/interactions";
 import { paymentsRouter } from "./routes/payments";
 import { recipesRouter } from "./routes/recipes";
+import { categoriesRouter } from "./routes/categories";
+import aiRouter from "./routes/ai";
 
 const app = express();
 
@@ -19,6 +21,8 @@ app.use("/api/bookmarks", bookmarksRouter);
 app.use("/api/interactions", interactionsRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/recipes", recipesRouter);
+app.use("/api/categories", categoriesRouter);
+app.use("/api/ai", aiRouter);
 
 // Base root endpoint
 app.get("/", (req: Request, res: Response) => {
@@ -26,3 +30,4 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 export default app;
+// Trigger nodemon restart

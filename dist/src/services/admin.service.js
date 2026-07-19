@@ -115,8 +115,9 @@ class AdminService {
         if (search && search.trim() !== "") {
             const regex = new RegExp(search.trim(), "i");
             query.$or = [
-                { title: regex },
                 { recipeName: regex },
+                { title: regex },
+                { authorName: regex },
                 { author: regex },
                 { authorEmail: regex },
             ];
@@ -131,7 +132,12 @@ class AdminService {
             query.isFeatured = { $ne: true };
         }
         const [recipes, totalCount] = await Promise.all([
-            db_1.collections.recipes.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray(),
+            db_1.collections.recipes
+                .find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .toArray(),
             db_1.collections.recipes.countDocuments(query),
         ]);
         return {
@@ -149,23 +155,25 @@ class AdminService {
         if (!mongodb_1.ObjectId.isValid(recipeId)) {
             throw new Error("INVALID_ID");
         }
-        const recipe = await db_1.collections.recipes.findOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        const recipe = await db_1.collections.recipes.findOne({
+            _id: new mongodb_1.ObjectId(recipeId),
+        });
         if (!recipe) {
             throw new Error("NOT_FOUND");
         }
         const cleanUpdate = {};
         const allowedKeys = [
-            "title",
+            "recipeName",
             "description",
-            "image",
-            "prepTime",
-            "cookTime",
-            "difficulty",
+            "recipeImage",
+            "preparationTime",
+            "difficultyLevel",
             "category",
             "ingredients",
             "instructions",
             "price",
             "isFeatured",
+            "status",
         ];
         allowedKeys.forEach((key) => {
             if (updateData[key] !== undefined) {
@@ -173,6 +181,14 @@ class AdminService {
             }
         });
         cleanUpdate.updatedAt = new Date();
+        if (cleanUpdate.recipeName !== undefined)
+            cleanUpdate.title = cleanUpdate.recipeName;
+        if (cleanUpdate.recipeImage !== undefined)
+            cleanUpdate.image = cleanUpdate.recipeImage;
+        if (cleanUpdate.preparationTime !== undefined)
+            cleanUpdate.prepTime = cleanUpdate.preparationTime;
+        if (cleanUpdate.difficultyLevel !== undefined)
+            cleanUpdate.difficulty = cleanUpdate.difficultyLevel;
         await db_1.collections.recipes.updateOne({ _id: new mongodb_1.ObjectId(recipeId) }, { $set: cleanUpdate });
         return { ...recipe, ...cleanUpdate };
     }
@@ -183,7 +199,9 @@ class AdminService {
         if (!mongodb_1.ObjectId.isValid(recipeId)) {
             throw new Error("INVALID_ID");
         }
-        const recipe = await db_1.collections.recipes.findOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        const recipe = await db_1.collections.recipes.findOne({
+            _id: new mongodb_1.ObjectId(recipeId),
+        });
         if (!recipe) {
             throw new Error("NOT_FOUND");
         }
@@ -199,7 +217,9 @@ class AdminService {
         if (!mongodb_1.ObjectId.isValid(recipeId)) {
             throw new Error("INVALID_ID");
         }
-        const recipe = await db_1.collections.recipes.findOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        const recipe = await db_1.collections.recipes.findOne({
+            _id: new mongodb_1.ObjectId(recipeId),
+        });
         if (!recipe) {
             throw new Error("NOT_FOUND");
         }
@@ -255,10 +275,30 @@ class AdminService {
                 $project: {
                     _id: 0,
                     recipeId: "$_id",
-                    recipeName: { $ifNull: ["$recipeDetails.title", "$recipeDetails.recipeName", "Reported Item"] },
-                    recipeImage: { $ifNull: ["$recipeDetails.image", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80"] },
-                    authorName: { $ifNull: ["$recipeDetails.author", "$recipeDetails.authorName", "Chef User"] },
-                    authorEmail: { $ifNull: ["$recipeDetails.authorEmail", "chef@example.com"] },
+                    recipeName: {
+                        $ifNull: [
+                            "$recipeDetails.recipeName",
+                            "$recipeDetails.title",
+                            "Reported Item",
+                        ],
+                    },
+                    recipeImage: {
+                        $ifNull: [
+                            "$recipeDetails.recipeImage",
+                            "$recipeDetails.image",
+                            "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80",
+                        ],
+                    },
+                    authorName: {
+                        $ifNull: [
+                            "$recipeDetails.authorName",
+                            "$recipeDetails.author",
+                            "Chef User",
+                        ],
+                    },
+                    authorEmail: {
+                        $ifNull: ["$recipeDetails.authorEmail", "chef@example.com"],
+                    },
                     reportCount: 1,
                     reasons: 1,
                     primaryReason: { $arrayElemAt: ["$reasons", 0] },
@@ -291,7 +331,10 @@ class AdminService {
         const query = mongodb_1.ObjectId.isValid(recipeId)
             ? { $or: [{ recipeId: recipeId }, { recipeId: new mongodb_1.ObjectId(recipeId) }] }
             : { recipeId: recipeId };
-        const reports = await db_1.collections.reports.find(query).sort({ createdAt: -1 }).toArray();
+        const reports = await db_1.collections.reports
+            .find(query)
+            .sort({ createdAt: -1 })
+            .toArray();
         return reports.map((r) => ({
             id: r._id.toString(),
             recipeId: r.recipeId,
@@ -325,7 +368,9 @@ class AdminService {
         if (!mongodb_1.ObjectId.isValid(reportId)) {
             throw new Error("INVALID_ID");
         }
-        const report = await db_1.collections.reports.findOne({ _id: new mongodb_1.ObjectId(reportId) });
+        const report = await db_1.collections.reports.findOne({
+            _id: new mongodb_1.ObjectId(reportId),
+        });
         if (!report) {
             throw new Error("NOT_FOUND");
         }
@@ -340,7 +385,9 @@ class AdminService {
         if (!mongodb_1.ObjectId.isValid(reportId)) {
             throw new Error("INVALID_ID");
         }
-        const report = await db_1.collections.reports.findOne({ _id: new mongodb_1.ObjectId(reportId) });
+        const report = await db_1.collections.reports.findOne({
+            _id: new mongodb_1.ObjectId(reportId),
+        });
         if (!report) {
             throw new Error("NOT_FOUND");
         }
@@ -355,7 +402,82 @@ class AdminService {
      * Lists all transactions.
      */
     static async listTransactions() {
-        return await db_1.collections.payments.find({}).sort({ createdAt: -1 }).toArray();
+        return await db_1.collections.payments
+            .find({})
+            .sort({ createdAt: -1 })
+            .toArray();
+    }
+    // --- REVENUE & WITHDRAWALS ---
+    static async getRevenueStats() {
+        const payments = await db_1.collections.payments
+            .find({ paymentStatus: { $in: ["succeeded", "paid"] } })
+            .toArray();
+        const totalRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+        const withdrawals = await db_1.collections.withdrawals.find({}).toArray();
+        const totalWithdrawn = withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
+        return {
+            totalRevenue,
+            totalWithdrawn,
+            availableBalance: totalRevenue - totalWithdrawn,
+        };
+    }
+    static async createWithdrawal(adminEmail, amount, note) {
+        if (amount <= 0)
+            throw new Error("INVALID_AMOUNT");
+        const stats = await this.getRevenueStats();
+        if (amount > stats.availableBalance) {
+            throw new Error("INSUFFICIENT_FUNDS");
+        }
+        const doc = {
+            adminEmail,
+            amount,
+            note,
+            status: "completed",
+            createdAt: new Date(),
+        };
+        const result = await db_1.collections.withdrawals.insertOne(doc);
+        return { ...doc, _id: result.insertedId };
+    }
+    static async listWithdrawals() {
+        return await db_1.collections.withdrawals.find({}).sort({ createdAt: -1 }).toArray();
+    }
+    // --- CATEGORIES ---
+    static async listCategories() {
+        return await db_1.collections.categories.find({}).sort({ name: 1 }).toArray();
+    }
+    static async createCategory(name, description) {
+        const existing = await db_1.collections.categories.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") } });
+        if (existing)
+            throw new Error("CATEGORY_EXISTS");
+        const doc = {
+            name,
+            description,
+            createdAt: new Date(),
+        };
+        const result = await db_1.collections.categories.insertOne(doc);
+        return { ...doc, _id: result.insertedId };
+    }
+    static async deleteCategory(id) {
+        if (!mongodb_1.ObjectId.isValid(id))
+            throw new Error("INVALID_ID");
+        const result = await db_1.collections.categories.deleteOne({ _id: new mongodb_1.ObjectId(id) });
+        if (result.deletedCount === 0)
+            throw new Error("NOT_FOUND");
+        return { success: true };
+    }
+    // --- BROADCASTS ---
+    static async listBroadcasts() {
+        return await db_1.collections.broadcasts.find({}).sort({ createdAt: -1 }).toArray();
+    }
+    static async createBroadcast(adminEmail, subject, message) {
+        const doc = {
+            adminEmail,
+            subject,
+            message,
+            createdAt: new Date(),
+        };
+        const result = await db_1.collections.broadcasts.insertOne(doc);
+        return { ...doc, _id: result.insertedId };
     }
 }
 exports.AdminService = AdminService;

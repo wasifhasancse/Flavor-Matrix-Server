@@ -26,6 +26,16 @@ router.get("/reports/:recipeId/details", admin_controller_1.AdminController.getR
 router.patch("/reports/:recipeId/dismiss", admin_controller_1.AdminController.dismissReports);
 router.patch("/reports/:id/resolve", admin_controller_1.AdminController.toggleReportStatus);
 router.delete("/reports/:id/recipe", admin_controller_1.AdminController.deleteReportedRecipe);
-// Financial logs
+// Financial logs & Revenue
 router.get("/transactions", admin_controller_1.AdminController.listTransactions);
+router.get("/revenue", admin_controller_1.AdminController.getRevenueStats);
+router.post("/withdraw", admin_controller_1.AdminController.createWithdrawal);
+router.get("/withdrawals", admin_controller_1.AdminController.listWithdrawals);
+// Categories Management
+router.get("/categories", admin_controller_1.AdminController.listCategories);
+router.post("/categories", admin_controller_1.AdminController.createCategory);
+router.delete("/categories/:id", admin_controller_1.AdminController.deleteCategory);
+// Broadcasts & Newsletters
+router.get("/broadcasts", admin_controller_1.AdminController.listBroadcasts);
+router.post("/broadcasts", admin_controller_1.AdminController.createBroadcast);
 exports.adminRouter = router;

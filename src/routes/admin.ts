@@ -30,7 +30,19 @@ router.patch("/reports/:recipeId/dismiss", AdminController.dismissReports);
 router.patch("/reports/:id/resolve", AdminController.toggleReportStatus);
 router.delete("/reports/:id/recipe", AdminController.deleteReportedRecipe);
 
-// Financial logs
+// Financial logs & Revenue
 router.get("/transactions", AdminController.listTransactions);
+router.get("/revenue", AdminController.getRevenueStats);
+router.post("/withdraw", AdminController.createWithdrawal);
+router.get("/withdrawals", AdminController.listWithdrawals);
+
+// Categories Management
+router.get("/categories", AdminController.listCategories);
+router.post("/categories", AdminController.createCategory);
+router.delete("/categories/:id", AdminController.deleteCategory);
+
+// Broadcasts & Newsletters
+router.get("/broadcasts", AdminController.listBroadcasts);
+router.post("/broadcasts", AdminController.createBroadcast);
 
 export const adminRouter = router;

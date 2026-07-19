@@ -11,7 +11,9 @@ export class InteractionService {
       throw new Error("INVALID_ID");
     }
 
-    const recipe = await collections.recipes.findOne({ _id: new ObjectId(recipeId) });
+    const recipe = await collections.recipes.findOne({
+      _id: new ObjectId(recipeId),
+    });
     if (!recipe) {
       throw new Error("NOT_FOUND");
     }
@@ -19,7 +21,7 @@ export class InteractionService {
     // Increment likesCount field as per DB architecture
     await collections.recipes.updateOne(
       { _id: new ObjectId(recipeId) },
-      { $inc: { likesCount: 1 } }
+      { $inc: { likesCount: 1, likes: 1 } },
     );
 
     return { likesCount: (recipe.likesCount || recipe.likes || 0) + 1 };
@@ -29,12 +31,18 @@ export class InteractionService {
    * Toggles bookmarking a recipe.
    * Uses favorites collection schema: userEmail, userId, recipeId, addedAt.
    */
-  static async toggleFavorite(userId: string, userEmail: string, recipeId: string) {
+  static async toggleFavorite(
+    userId: string,
+    userEmail: string,
+    recipeId: string,
+  ) {
     if (!ObjectId.isValid(recipeId)) {
       throw new Error("INVALID_ID");
     }
 
-    const recipe = await collections.recipes.findOne({ _id: new ObjectId(recipeId) });
+    const recipe = await collections.recipes.findOne({
+      _id: new ObjectId(recipeId),
+    });
     if (!recipe) {
       throw new Error("NOT_FOUND");
     }
@@ -55,7 +63,10 @@ export class InteractionService {
         addedAt: new Date(),
       };
       const result = await collections.favorites.insertOne(favDoc);
-      return { favorited: true, favorite: { ...favDoc, _id: result.insertedId } };
+      return {
+        favorited: true,
+        favorite: { ...favDoc, _id: result.insertedId },
+      };
     }
   }
 
@@ -63,12 +74,18 @@ export class InteractionService {
    * Registers a report for a recipe.
    * Uses reports collection schema: recipeId, reporterEmail, reason, status, createdAt.
    */
-  static async reportRecipe(recipeId: string, reporterEmail: string, reason: string) {
+  static async reportRecipe(
+    recipeId: string,
+    reporterEmail: string,
+    reason: string,
+  ) {
     if (!ObjectId.isValid(recipeId)) {
       throw new Error("INVALID_ID");
     }
 
-    const recipe = await collections.recipes.findOne({ _id: new ObjectId(recipeId) });
+    const recipe = await collections.recipes.findOne({
+      _id: new ObjectId(recipeId),
+    });
     if (!recipe) {
       throw new Error("NOT_FOUND");
     }

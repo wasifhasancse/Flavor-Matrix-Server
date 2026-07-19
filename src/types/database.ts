@@ -7,7 +7,7 @@ export interface UserDoc {
   _id?: ObjectId;
   name: string;
   email: string;
-  image: string;
+  image?: string | null;
   role: "user" | "admin";
   isBlocked: boolean;
   isPremium: boolean;
@@ -20,25 +20,31 @@ export interface UserDoc {
  */
 export interface RecipeDoc {
   _id?: ObjectId;
-  title: string;
+  recipeName: string;
   description: string;
-  image: string;
+  recipeImage: string;
   category: string;
   cuisineType: string;
-  difficulty: "Easy" | "Medium" | "Hard";
-  prepTime: string;
-  cookTime: string;
+  difficultyLevel: "Easy" | "Medium" | "Hard";
+  preparationTime: string;
   ingredients: string[];
   instructions: string[];
   authorId: string;
-  author: string;
+  authorName: string;
   authorEmail: string;
-  likes: number;
+  likesCount: number;
   isFeatured: boolean;
-  status: "published" | "draft" | "pending" | "archived";
+  status: "free" | "premium";
   price?: number;
   createdAt: Date;
   updatedAt: Date;
+  title?: string;
+  image?: string;
+  difficulty?: "Easy" | "Medium" | "Hard";
+  prepTime?: string;
+  cookTime?: string;
+  author?: string;
+  likes?: number;
 }
 
 /**
@@ -62,6 +68,7 @@ export interface ReportDoc {
   reason: string;
   status: "pending" | "reviewed" | "resolved" | "dismissed";
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 /**

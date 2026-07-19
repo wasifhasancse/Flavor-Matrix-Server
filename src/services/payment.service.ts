@@ -1,10 +1,12 @@
-import Stripe from "stripe";
 import { ObjectId } from "mongodb";
+import Stripe from "stripe";
 import { collections } from "../config/db";
 import { PaymentDoc } from "../types/database";
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "sk_test_placeholder";
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "whsec_placeholder";
+const STRIPE_SECRET_KEY =
+  process.env.STRIPE_SECRET_KEY || "sk_test_placeholder";
+const STRIPE_WEBHOOK_SECRET =
+  process.env.STRIPE_WEBHOOK_SECRET || "whsec_placeholder";
 
 const stripe = new Stripe(STRIPE_SECRET_KEY);
 
@@ -12,7 +14,11 @@ export class PaymentService {
   /**
    * Creates a Checkout Session for upgrading a user to Premium.
    */
-  static async createMembershipSession(userId: string, successUrl: string, cancelUrl: string): Promise<string> {
+  static async createMembershipSession(
+    userId: string,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<string> {
     if (!ObjectId.isValid(userId)) {
       throw new Error("INVALID_USER_ID");
     }
@@ -30,7 +36,8 @@ export class PaymentService {
             currency: "usd",
             product_data: {
               name: "Lifetime Premium Membership",
-              description: "Unlimited recipe creation and exclusive access on Flavor Matrix.",
+              description:
+                "Unlimited recipe creation and exclusive access on Flavor Matrix.",
             },
             unit_amount: 1999, // $19.99
           },
@@ -61,7 +68,7 @@ export class PaymentService {
     userId: string,
     recipeId: string,
     successUrl: string,
-    cancelUrl: string
+    cancelUrl: string,
   ): Promise<string> {
     if (!ObjectId.isValid(userId)) {
       throw new Error("INVALID_USER_ID");
@@ -75,7 +82,9 @@ export class PaymentService {
       throw new Error("USER_NOT_FOUND");
     }
 
-    const recipe = await collections.recipes.findOne({ _id: new ObjectId(recipeId) });
+    const recipe = await collections.recipes.findOne({
+      _id: new ObjectId(recipeId),
+    });
     if (!recipe) {
       throw new Error("RECIPE_NOT_FOUND");
     }
@@ -122,13 +131,23 @@ export class PaymentService {
    * Handles secure Stripe webhooks and records successful payment documents.
    * Follows Payment Schema: userEmail, userId, amount, recipeId, transactionId, paymentStatus, paidAt.
    */
-  static async handleWebhook(rawBody: Buffer, signature: string): Promise<void> {
+  static async handleWebhook(
+    rawBody: Buffer,
+    signature: string,
+  ): Promise<void> {
     let event: Stripe.Event;
 
     try {
-      event = stripe.webhooks.constructEvent(rawBody, signature, STRIPE_WEBHOOK_SECRET);
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        STRIPE_WEBHOOK_SECRET,
+      );
     } catch (err: any) {
-      console.error(`[Stripe Webhook Error] Signature verification failed:`, err.message);
+      console.error(
+        `[Stripe Webhook Error] Signature verification failed:`,
+        err.message,
+      );
       throw new Error("SIGNATURE_VERIFICATION_FAILED");
     }
 
@@ -146,15 +165,20 @@ export class PaymentService {
 
       if (type === "membership_upgrade" && userId) {
         // Upgrade user status in 'users' collection
-        console.log(`[Stripe Webhook] Upgrading user ${userId} to Premium status.`);
+        console.log(
+          `[Stripe Webhook] Upgrading user ${userId} to Premium status.`,
+        );
         await collections.users.updateOne(
           { _id: new ObjectId(userId) },
-          { $set: { isPremium: true, updatedAt: now } }
+          { $set: { isPremium: true, updatedAt: now } },
         );
 
         // Record payment in 'payments' collection according to database architecture
         const paymentDoc: PaymentDoc = {
-          userEmail: userEmail || session.customer_details?.email || "unknown@example.com",
+          userEmail:
+            userEmail ||
+            session.customer_details?.email ||
+            "unknown@example.com",
           userId,
           amount: (session.amount_total || 0) / 100,
           recipeId: "MEMBERSHIP_UPGRADE",
@@ -165,9 +189,14 @@ export class PaymentService {
         await collections.payments.insertOne(paymentDoc);
       } else if (type === "recipe_purchase" && userId && recipeId) {
         // Record payment in 'payments' collection according to database architecture
-        console.log(`[Stripe Webhook] Logging recipe payment ${recipeId} for user ${userId}.`);
+        console.log(
+          `[Stripe Webhook] Logging recipe payment ${recipeId} for user ${userId}.`,
+        );
         const paymentDoc: PaymentDoc = {
-          userEmail: userEmail || session.customer_details?.email || "unknown@example.com",
+          userEmail:
+            userEmail ||
+            session.customer_details?.email ||
+            "unknown@example.com",
           userId,
           amount: (session.amount_total || 0) / 100,
           recipeId,

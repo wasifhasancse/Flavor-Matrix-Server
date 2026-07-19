@@ -24,5 +24,8 @@ exports.collections = {
     payments: exports.db.collection("payments"),
     ratings: exports.db.collection("ratings"),
     reports: exports.db.collection("reports"),
-    favorites: exports.db.collection("favorites")
+    favorites: exports.db.collection("favorites"),
+    withdrawals: exports.db.collection("withdrawals"),
+    categories: exports.db.collection("categories"),
+    broadcasts: exports.db.collection("broadcasts"),
 };

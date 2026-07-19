@@ -6,12 +6,13 @@ export class AdminService {
    * Fetches total aggregates across all collections.
    */
   static async getStats() {
-    const [totalUsers, totalRecipes, premiumUsers, activeReports] = await Promise.all([
-      collections.users.countDocuments({}),
-      collections.recipes.countDocuments({}),
-      collections.users.countDocuments({ isPremium: true }),
-      collections.reports.countDocuments({ status: "pending" }),
-    ]);
+    const [totalUsers, totalRecipes, premiumUsers, activeReports] =
+      await Promise.all([
+        collections.users.countDocuments({}),
+        collections.recipes.countDocuments({}),
+        collections.users.countDocuments({ isPremium: true }),
+        collections.reports.countDocuments({ status: "pending" }),
+      ]);
 
     return {
       totalUsers,
@@ -113,7 +114,7 @@ export class AdminService {
     const newBlockedState = !user.isBlocked;
     await collections.users.updateOne(
       { _id: new ObjectId(userId) },
-      { $set: { isBlocked: newBlockedState, updatedAt: new Date() } }
+      { $set: { isBlocked: newBlockedState, updatedAt: new Date() } },
     );
 
     return { id: userId, isBlocked: newBlockedState };
@@ -122,15 +123,22 @@ export class AdminService {
   /**
    * Lists all recipes with pagination, searching & category/featured filtering.
    */
-  static async listRecipes(page = 1, limit = 10, search = "", category = "all", featured = "all") {
+  static async listRecipes(
+    page = 1,
+    limit = 10,
+    search = "",
+    category = "all",
+    featured = "all",
+  ) {
     const skip = (page - 1) * limit;
 
     const query: any = {};
     if (search && search.trim() !== "") {
       const regex = new RegExp(search.trim(), "i");
       query.$or = [
-        { title: regex },
         { recipeName: regex },
+        { title: regex },
+        { authorName: regex },
         { author: regex },
         { authorEmail: regex },
       ];
@@ -147,7 +155,12 @@ export class AdminService {
     }
 
     const [recipes, totalCount] = await Promise.all([
-      collections.recipes.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray(),
+      collections.recipes
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
       collections.recipes.countDocuments(query),
     ]);
 
@@ -168,24 +181,26 @@ export class AdminService {
       throw new Error("INVALID_ID");
     }
 
-    const recipe = await collections.recipes.findOne({ _id: new ObjectId(recipeId) });
+    const recipe = await collections.recipes.findOne({
+      _id: new ObjectId(recipeId),
+    });
     if (!recipe) {
       throw new Error("NOT_FOUND");
     }
 
     const cleanUpdate: any = {};
     const allowedKeys = [
-      "title",
+      "recipeName",
       "description",
-      "image",
-      "prepTime",
-      "cookTime",
-      "difficulty",
+      "recipeImage",
+      "preparationTime",
+      "difficultyLevel",
       "category",
       "ingredients",
       "instructions",
       "price",
       "isFeatured",
+      "status",
     ];
 
     allowedKeys.forEach((key) => {
@@ -195,8 +210,19 @@ export class AdminService {
     });
 
     cleanUpdate.updatedAt = new Date();
+    if (cleanUpdate.recipeName !== undefined)
+      cleanUpdate.title = cleanUpdate.recipeName;
+    if (cleanUpdate.recipeImage !== undefined)
+      cleanUpdate.image = cleanUpdate.recipeImage;
+    if (cleanUpdate.preparationTime !== undefined)
+      cleanUpdate.prepTime = cleanUpdate.preparationTime;
+    if (cleanUpdate.difficultyLevel !== undefined)
+      cleanUpdate.difficulty = cleanUpdate.difficultyLevel;
 
-    await collections.recipes.updateOne({ _id: new ObjectId(recipeId) }, { $set: cleanUpdate });
+    await collections.recipes.updateOne(
+      { _id: new ObjectId(recipeId) },
+      { $set: cleanUpdate },
+    );
     return { ...recipe, ...cleanUpdate };
   }
 
@@ -208,17 +234,19 @@ export class AdminService {
       throw new Error("INVALID_ID");
     }
 
-    const recipe = await collections.recipes.findOne({ _id: new ObjectId(recipeId) });
+    const recipe = await collections.recipes.findOne({
+      _id: new ObjectId(recipeId),
+    });
     if (!recipe) {
       throw new Error("NOT_FOUND");
     }
 
     await collections.recipes.deleteOne({ _id: new ObjectId(recipeId) });
-    
+
     // Auto-resolve corresponding reports
     await collections.reports.updateMany(
       { recipeId: recipeId },
-      { $set: { status: "resolved", updatedAt: new Date() } }
+      { $set: { status: "resolved", updatedAt: new Date() } },
     );
 
     return { success: true };
@@ -232,7 +260,9 @@ export class AdminService {
       throw new Error("INVALID_ID");
     }
 
-    const recipe = await collections.recipes.findOne({ _id: new ObjectId(recipeId) });
+    const recipe = await collections.recipes.findOne({
+      _id: new ObjectId(recipeId),
+    });
     if (!recipe) {
       throw new Error("NOT_FOUND");
     }
@@ -240,7 +270,7 @@ export class AdminService {
     const newFeaturedState = !recipe.isFeatured;
     await collections.recipes.updateOne(
       { _id: new ObjectId(recipeId) },
-      { $set: { isFeatured: newFeaturedState, updatedAt: new Date() } }
+      { $set: { isFeatured: newFeaturedState, updatedAt: new Date() } },
     );
 
     return { id: recipeId, isFeatured: newFeaturedState };
@@ -296,10 +326,30 @@ export class AdminService {
         $project: {
           _id: 0,
           recipeId: "$_id",
-          recipeName: { $ifNull: ["$recipeDetails.title", "$recipeDetails.recipeName", "Reported Item"] },
-          recipeImage: { $ifNull: ["$recipeDetails.image", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80"] },
-          authorName: { $ifNull: ["$recipeDetails.author", "$recipeDetails.authorName", "Chef User"] },
-          authorEmail: { $ifNull: ["$recipeDetails.authorEmail", "chef@example.com"] },
+          recipeName: {
+            $ifNull: [
+              "$recipeDetails.recipeName",
+              "$recipeDetails.title",
+              "Reported Item",
+            ],
+          },
+          recipeImage: {
+            $ifNull: [
+              "$recipeDetails.recipeImage",
+              "$recipeDetails.image",
+              "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80",
+            ],
+          },
+          authorName: {
+            $ifNull: [
+              "$recipeDetails.authorName",
+              "$recipeDetails.author",
+              "Chef User",
+            ],
+          },
+          authorEmail: {
+            $ifNull: ["$recipeDetails.authorEmail", "chef@example.com"],
+          },
           reportCount: 1,
           reasons: 1,
           primaryReason: { $arrayElemAt: ["$reasons", 0] },
@@ -336,7 +386,10 @@ export class AdminService {
       ? { $or: [{ recipeId: recipeId }, { recipeId: new ObjectId(recipeId) }] }
       : { recipeId: recipeId };
 
-    const reports = await collections.reports.find(query).sort({ createdAt: -1 }).toArray();
+    const reports = await collections.reports
+      .find(query)
+      .sort({ createdAt: -1 })
+      .toArray();
 
     return reports.map((r: any) => ({
       id: r._id.toString(),
@@ -377,7 +430,9 @@ export class AdminService {
       throw new Error("INVALID_ID");
     }
 
-    const report = await collections.reports.findOne({ _id: new ObjectId(reportId) });
+    const report = await collections.reports.findOne({
+      _id: new ObjectId(reportId),
+    });
     if (!report) {
       throw new Error("NOT_FOUND");
     }
@@ -385,7 +440,7 @@ export class AdminService {
     const nextStatus = report.status === "pending" ? "resolved" : "pending";
     await collections.reports.updateOne(
       { _id: new ObjectId(reportId) },
-      { $set: { status: nextStatus, updatedAt: new Date() } }
+      { $set: { status: nextStatus, updatedAt: new Date() } },
     );
 
     return { id: reportId, status: nextStatus };
@@ -399,7 +454,9 @@ export class AdminService {
       throw new Error("INVALID_ID");
     }
 
-    const report = await collections.reports.findOne({ _id: new ObjectId(reportId) });
+    const report = await collections.reports.findOne({
+      _id: new ObjectId(reportId),
+    });
     if (!report) {
       throw new Error("NOT_FOUND");
     }
@@ -411,7 +468,7 @@ export class AdminService {
 
     await collections.reports.updateMany(
       { recipeId: recipeId },
-      { $set: { status: "resolved", updatedAt: new Date() } }
+      { $set: { status: "resolved", updatedAt: new Date() } },
     );
 
     return { success: true };
@@ -421,6 +478,95 @@ export class AdminService {
    * Lists all transactions.
    */
   static async listTransactions() {
-    return await collections.payments.find({}).sort({ createdAt: -1 }).toArray();
+    return await collections.payments
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+  }
+
+  // --- REVENUE & WITHDRAWALS ---
+
+  static async getRevenueStats() {
+    const payments = await collections.payments
+      .find({ paymentStatus: { $in: ["succeeded", "paid"] } })
+      .toArray();
+    
+    const totalRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    const withdrawals = await collections.withdrawals.find({}).toArray();
+    const totalWithdrawn = withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
+    
+    return {
+      totalRevenue,
+      totalWithdrawn,
+      availableBalance: totalRevenue - totalWithdrawn,
+    };
+  }
+
+  static async createWithdrawal(adminEmail: string, amount: number, note: string) {
+    if (amount <= 0) throw new Error("INVALID_AMOUNT");
+    
+    const stats = await this.getRevenueStats();
+    if (amount > stats.availableBalance) {
+      throw new Error("INSUFFICIENT_FUNDS");
+    }
+
+    const doc = {
+      adminEmail,
+      amount,
+      note,
+      status: "completed",
+      createdAt: new Date(),
+    };
+    
+    const result = await collections.withdrawals.insertOne(doc);
+    return { ...doc, _id: result.insertedId };
+  }
+
+  static async listWithdrawals() {
+    return await collections.withdrawals.find({}).sort({ createdAt: -1 }).toArray();
+  }
+
+  // --- CATEGORIES ---
+
+  static async listCategories() {
+    return await collections.categories.find({}).sort({ name: 1 }).toArray();
+  }
+
+  static async createCategory(name: string, description: string) {
+    const existing = await collections.categories.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") } });
+    if (existing) throw new Error("CATEGORY_EXISTS");
+
+    const doc = {
+      name,
+      description,
+      createdAt: new Date(),
+    };
+    const result = await collections.categories.insertOne(doc);
+    return { ...doc, _id: result.insertedId };
+  }
+
+  static async deleteCategory(id: string) {
+    if (!ObjectId.isValid(id)) throw new Error("INVALID_ID");
+    const result = await collections.categories.deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) throw new Error("NOT_FOUND");
+    return { success: true };
+  }
+
+  // --- BROADCASTS ---
+
+  static async listBroadcasts() {
+    return await collections.broadcasts.find({}).sort({ createdAt: -1 }).toArray();
+  }
+
+  static async createBroadcast(adminEmail: string, subject: string, message: string) {
+    const doc = {
+      adminEmail,
+      subject,
+      message,
+      createdAt: new Date(),
+    };
+    const result = await collections.broadcasts.insertOne(doc);
+    return { ...doc, _id: result.insertedId };
   }
 }

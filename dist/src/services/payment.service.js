@@ -4,8 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentService = void 0;
-const stripe_1 = __importDefault(require("stripe"));
 const mongodb_1 = require("mongodb");
+const stripe_1 = __importDefault(require("stripe"));
 const db_1 = require("../config/db");
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "sk_test_placeholder";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "whsec_placeholder";
@@ -65,7 +65,9 @@ class PaymentService {
         if (!user) {
             throw new Error("USER_NOT_FOUND");
         }
-        const recipe = await db_1.collections.recipes.findOne({ _id: new mongodb_1.ObjectId(recipeId) });
+        const recipe = await db_1.collections.recipes.findOne({
+            _id: new mongodb_1.ObjectId(recipeId),
+        });
         if (!recipe) {
             throw new Error("RECIPE_NOT_FOUND");
         }
@@ -131,7 +133,9 @@ class PaymentService {
                 await db_1.collections.users.updateOne({ _id: new mongodb_1.ObjectId(userId) }, { $set: { isPremium: true, updatedAt: now } });
                 // Record payment in 'payments' collection according to database architecture
                 const paymentDoc = {
-                    userEmail: userEmail || session.customer_details?.email || "unknown@example.com",
+                    userEmail: userEmail ||
+                        session.customer_details?.email ||
+                        "unknown@example.com",
                     userId,
                     amount: (session.amount_total || 0) / 100,
                     recipeId: "MEMBERSHIP_UPGRADE",
@@ -145,7 +149,9 @@ class PaymentService {
                 // Record payment in 'payments' collection according to database architecture
                 console.log(`[Stripe Webhook] Logging recipe payment ${recipeId} for user ${userId}.`);
                 const paymentDoc = {
-                    userEmail: userEmail || session.customer_details?.email || "unknown@example.com",
+                    userEmail: userEmail ||
+                        session.customer_details?.email ||
+                        "unknown@example.com",
                     userId,
                     amount: (session.amount_total || 0) / 100,
                     recipeId,

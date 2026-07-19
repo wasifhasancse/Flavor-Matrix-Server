@@ -24,7 +24,10 @@ export const collections = {
   payments: db.collection("payments"),
   ratings: db.collection("ratings"),
   reports: db.collection("reports"),
-  favorites: db.collection("favorites")
+  favorites: db.collection("favorites"),
+  withdrawals: db.collection("withdrawals"),
+  categories: db.collection("categories"),
+  broadcasts: db.collection("broadcasts"),
 };
 
 export { ObjectId };

@@ -252,5 +252,122 @@ class AdminController {
             res.status(500).json({ error: "Internal server error while retrieving transactions." });
         }
     }
+    // --- REVENUE & WITHDRAWALS ---
+    static async getRevenueStats(req, res) {
+        try {
+            const stats = await admin_service_1.AdminService.getRevenueStats();
+            res.status(200).json({ success: true, stats });
+        }
+        catch (error) {
+            console.error("Admin Revenue Stats Error:", error);
+            res.status(500).json({ error: "Internal server error." });
+        }
+    }
+    static async createWithdrawal(req, res) {
+        try {
+            const { amount, note } = req.body;
+            const adminEmail = req.user?.email || "admin@system.com";
+            const withdrawal = await admin_service_1.AdminService.createWithdrawal(adminEmail, Number(amount), note);
+            res.status(201).json({ success: true, withdrawal });
+        }
+        catch (error) {
+            if (error.message === "INSUFFICIENT_FUNDS") {
+                res.status(400).json({ error: "Insufficient available funds for withdrawal." });
+                return;
+            }
+            if (error.message === "INVALID_AMOUNT") {
+                res.status(400).json({ error: "Invalid amount." });
+                return;
+            }
+            console.error("Admin Create Withdrawal Error:", error);
+            res.status(500).json({ error: "Internal server error." });
+        }
+    }
+    static async listWithdrawals(req, res) {
+        try {
+            const withdrawals = await admin_service_1.AdminService.listWithdrawals();
+            res.status(200).json({ success: true, withdrawals });
+        }
+        catch (error) {
+            console.error("Admin List Withdrawals Error:", error);
+            res.status(500).json({ error: "Internal server error." });
+        }
+    }
+    // --- CATEGORIES ---
+    static async listCategories(req, res) {
+        try {
+            const categories = await admin_service_1.AdminService.listCategories();
+            res.status(200).json({ success: true, categories });
+        }
+        catch (error) {
+            console.error("Admin List Categories Error:", error);
+            res.status(500).json({ error: "Internal server error." });
+        }
+    }
+    static async createCategory(req, res) {
+        try {
+            const { name, description } = req.body;
+            if (!name) {
+                res.status(400).json({ error: "Category name is required." });
+                return;
+            }
+            const category = await admin_service_1.AdminService.createCategory(name, description || "");
+            res.status(201).json({ success: true, category });
+        }
+        catch (error) {
+            if (error.message === "CATEGORY_EXISTS") {
+                res.status(400).json({ error: "Category already exists." });
+                return;
+            }
+            console.error("Admin Create Category Error:", error);
+            res.status(500).json({ error: "Internal server error." });
+        }
+    }
+    static async deleteCategory(req, res) {
+        try {
+            const categoryId = req.params.id;
+            await admin_service_1.AdminService.deleteCategory(categoryId);
+            res.status(200).json({ success: true, message: "Category deleted." });
+        }
+        catch (error) {
+            if (error.message === "INVALID_ID") {
+                res.status(400).json({ error: "Invalid ID format." });
+                return;
+            }
+            if (error.message === "NOT_FOUND") {
+                res.status(404).json({ error: "Category not found." });
+                return;
+            }
+            console.error("Admin Delete Category Error:", error);
+            res.status(500).json({ error: "Internal server error." });
+        }
+    }
+    // --- BROADCASTS ---
+    static async listBroadcasts(req, res) {
+        try {
+            const broadcasts = await admin_service_1.AdminService.listBroadcasts();
+            res.status(200).json({ success: true, broadcasts });
+        }
+        catch (error) {
+            console.error("Admin List Broadcasts Error:", error);
+            res.status(500).json({ error: "Internal server error." });
+        }
+    }
+    static async createBroadcast(req, res) {
+        try {
+            const { subject, message } = req.body;
+            const adminEmail = req.user?.email || "admin@system.com";
+            if (!subject || !message) {
+                res.status(400).json({ error: "Subject and message are required." });
+                return;
+            }
+            const broadcast = await admin_service_1.AdminService.createBroadcast(adminEmail, subject, message);
+            res.status(201).json({ success: true, broadcast });
+        }
+        catch (error) {
+            console.error("Admin Create Broadcast Error:", error);
+            res.status(500).json({ error: "Internal server error." });
+        }
+    }
 }
 exports.AdminController = AdminController;

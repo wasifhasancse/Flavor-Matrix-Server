@@ -3,21 +3,20 @@ import { collections } from "../config/db";
 import { RecipeDoc } from "../types/database";
 
 export interface CreateRecipeInput {
-  title: string;
+  recipeName: string;
   description: string;
-  image: string;
+  recipeImage: string;
   category: string;
   cuisineType: string;
-  difficulty: "Easy" | "Medium" | "Hard";
-  prepTime: string;
-  cookTime: string;
+  difficultyLevel: "Easy" | "Medium" | "Hard";
+  preparationTime: string;
   ingredients: string[];
   instructions: string[];
   authorId: string;
-  author: string;
+  authorName: string;
   authorEmail: string;
   price?: number;
-  status?: "published" | "draft" | "pending" | "archived";
+  status?: "free" | "premium";
 }
 
 export class RecipeService {
@@ -25,14 +24,19 @@ export class RecipeService {
    * Creates a new recipe following the required Database Architecture.
    * Enforces a 2-recipe limit for free (non-premium) users.
    */
-  static async createRecipe(userId: string, input: CreateRecipeInput): Promise<RecipeDoc> {
+  static async createRecipe(
+    userId: string,
+    input: CreateRecipeInput,
+  ): Promise<RecipeDoc> {
     // 1. Fetch user to check premium status
     const user = await collections.users.findOne({ _id: new ObjectId(userId) });
     const isPremium = user?.isPremium || false;
 
     // 2. If user is free, enforce the 2-recipe creation limit
     if (!isPremium) {
-      const createdCount = await collections.recipes.countDocuments({ authorId: userId });
+      const createdCount = await collections.recipes.countDocuments({
+        authorId: userId,
+      });
       if (createdCount >= 2) {
         throw new Error("LIMIT_EXCEEDED");
       }
@@ -40,26 +44,34 @@ export class RecipeService {
 
     // 3. Save recipe document to MongoDB with database architecture schema
     const now = new Date();
+    const normalizedStatus =
+      input.status || (input.price && input.price > 0 ? "premium" : "free");
     const doc: RecipeDoc = {
-      title: input.title,
+      recipeName: input.recipeName,
       description: input.description || "",
-      image: input.image,
+      recipeImage: input.recipeImage,
       category: input.category,
       cuisineType: input.cuisineType || "International",
-      difficulty: input.difficulty || "Easy",
-      prepTime: input.prepTime || "15 mins",
-      cookTime: input.cookTime || "20 mins",
+      difficultyLevel: input.difficultyLevel || "Easy",
+      preparationTime: input.preparationTime || "15 mins",
       ingredients: input.ingredients,
       instructions: input.instructions,
       authorId: input.authorId,
-      author: input.author,
+      authorName: input.authorName,
       authorEmail: input.authorEmail,
-      likes: 0,
+      likesCount: 0,
       isFeatured: false,
-      status: input.status || "published",
+      status: normalizedStatus,
       price: input.price ? Number(input.price) : undefined,
       createdAt: now,
       updatedAt: now,
+      title: input.recipeName,
+      image: input.recipeImage,
+      difficulty: input.difficultyLevel || "Easy",
+      prepTime: input.preparationTime || "15 mins",
+      cookTime: "20 mins",
+      author: input.authorName,
+      likes: 0,
     };
 
     const result = await collections.recipes.insertOne(doc);
@@ -69,31 +81,74 @@ export class RecipeService {
   /**
    * Retrieves recipes with server-side pagination & MongoDB $in array category filtering.
    */
-  static async getRecipes(query: { category?: string | string[]; categories?: string | string[]; page?: string; limit?: string; search?: string; difficultyLevel?: string; sortBy?: string; sortOrder?: string }) {
+  static async getRecipes(query: {
+    category?: string | string[];
+    categories?: string | string[];
+    page?: string;
+    limit?: string;
+    search?: string;
+    difficultyLevel?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  }) {
     const rawCategories = query.categories || query.category;
     let catList: string[] = [];
+    const matchConditions: any[] = [];
 
     if (Array.isArray(rawCategories)) {
       catList = rawCategories.map((c) => String(c).trim()).filter(Boolean);
     } else if (typeof rawCategories === "string") {
-      catList = rawCategories.split(",").map((c) => c.trim()).filter(Boolean);
+      catList = rawCategories
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean);
     }
 
-    const filter: any = {};
     if (catList.length > 0 && catList[0].toLowerCase() !== "all") {
-      filter.category = {
-        $in: catList.map((cat) => new RegExp(`^${cat.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i")),
-      };
+      matchConditions.push({
+        category: {
+          $in: catList.map(
+            (cat) =>
+              new RegExp(
+                `^${cat.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")}$`,
+                "i",
+              ),
+          ),
+        },
+      });
     }
 
-    if (query.difficultyLevel && query.difficultyLevel.toLowerCase() !== "all") {
-      filter.difficulty = query.difficultyLevel;
+    if (
+      query.difficultyLevel &&
+      query.difficultyLevel.toLowerCase() !== "all"
+    ) {
+      matchConditions.push({
+        $or: [
+          { difficultyLevel: query.difficultyLevel },
+          { difficulty: query.difficultyLevel },
+        ],
+      });
     }
 
-    if (query.search && typeof query.search === "string" && query.search.trim() !== "") {
+    if (
+      query.search &&
+      typeof query.search === "string" &&
+      query.search.trim() !== ""
+    ) {
       const regex = new RegExp(query.search.trim(), "i");
-      filter.$or = [{ title: regex }, { author: regex }, { authorEmail: regex }];
+      matchConditions.push({
+        $or: [
+          { recipeName: regex },
+          { title: regex },
+          { authorName: regex },
+          { author: regex },
+          { authorEmail: regex },
+        ],
+      });
     }
+
+    const filter: any =
+      matchConditions.length > 0 ? { $and: matchConditions } : {};
 
     const page = Math.max(1, Number(query.page || "1"));
     const limit = Math.max(1, Number(query.limit || "6"));
@@ -101,9 +156,9 @@ export class RecipeService {
 
     const sortConfig: any = {};
     if (query.sortBy === "likesCount" || query.sortBy === "likes") {
-      sortConfig.likes = query.sortOrder === "asc" ? 1 : -1;
-    } else if (query.sortBy === "title") {
-      sortConfig.title = query.sortOrder === "desc" ? -1 : 1;
+      sortConfig.likesCount = query.sortOrder === "asc" ? 1 : -1;
+    } else if (query.sortBy === "title" || query.sortBy === "recipeName") {
+      sortConfig.recipeName = query.sortOrder === "desc" ? -1 : 1;
     } else {
       // Default to createdAt desc (newest)
       sortConfig.createdAt = query.sortOrder === "asc" ? 1 : -1;
@@ -160,7 +215,7 @@ export class RecipeService {
     id: string,
     userId: string,
     role: string,
-    updateData: Partial<CreateRecipeInput>
+    updateData: Partial<CreateRecipeInput>,
   ) {
     if (!ObjectId.isValid(id)) {
       throw new Error("INVALID_ID");
@@ -177,14 +232,13 @@ export class RecipeService {
 
     const fieldsToSet: any = {};
     const allowedFields: Array<keyof CreateRecipeInput> = [
-      "title",
+      "recipeName",
       "description",
-      "image",
+      "recipeImage",
       "category",
       "cuisineType",
-      "difficulty",
-      "prepTime",
-      "cookTime",
+      "difficultyLevel",
+      "preparationTime",
       "ingredients",
       "instructions",
       "price",
@@ -198,8 +252,20 @@ export class RecipeService {
     });
 
     fieldsToSet.updatedAt = new Date();
+    if (fieldsToSet.recipeName !== undefined)
+      fieldsToSet.title = fieldsToSet.recipeName;
+    if (fieldsToSet.recipeImage !== undefined)
+      fieldsToSet.image = fieldsToSet.recipeImage;
+    if (fieldsToSet.difficultyLevel !== undefined)
+      fieldsToSet.difficulty = fieldsToSet.difficultyLevel;
+    if (fieldsToSet.preparationTime !== undefined)
+      fieldsToSet.prepTime = fieldsToSet.preparationTime;
+    fieldsToSet.author = recipe.authorName;
 
-    await collections.recipes.updateOne({ _id: new ObjectId(id) }, { $set: fieldsToSet });
+    await collections.recipes.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: fieldsToSet },
+    );
 
     return { ...recipe, ...fieldsToSet };
   }

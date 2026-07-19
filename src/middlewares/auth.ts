@@ -76,7 +76,7 @@ export async function verifyToken(req: Request, res: Response, next: NextFunctio
     }
 
     // Attach to extended Express Request user
-    req.user = {
+    (req as any).user = {
       id: userPayload.id,
       email: userPayload.email,
       role: userPayload.role,
