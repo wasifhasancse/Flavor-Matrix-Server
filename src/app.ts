@@ -28,7 +28,7 @@ app.use("/api/ai/chat", chatRouter);
 
 // Base root endpoint
 app.get("/", (req: Request, res: Response) => {
-  res.send("Hello World! Flavor Matrix Server is running.");
+  res.json({ status: "success", message: "Flavor Matrix Server is running successfully." });
 });
 
 export default app;
