@@ -74,9 +74,13 @@ Use your culinary expertise to assist the user with recipes, cooking tips, or na
     res.end();
   } catch (error: any) {
     console.error("AI Chat Streaming Error:", error);
-    // If headers are already sent, we can't send a 500 status code
+    // If headers are already sent, we can't send a status code
     if (!res.headersSent) {
-      res.status(500).json({ success: false, error: "Failed to generate chat stream.", details: error.message, stack: error.stack });
+      if (error.status === 429 || error.message?.includes("429")) {
+        res.status(429).json({ success: false, error: "Rate limit exceeded. Please try again in a few moments." });
+      } else {
+        res.status(500).json({ success: false, error: "Failed to generate chat stream.", details: error.message });
+      }
     } else {
       res.write(`data: ${JSON.stringify({ error: "An error occurred during generation." })}\n\n`);
       res.end();

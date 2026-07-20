@@ -66,23 +66,24 @@ export const analyzeFoodImage = async (req: Request, res: Response): Promise<voi
       }
     });
 
+    // Wait until response is completely formed and try parsing
     const responseText = response.text;
     if (!responseText) {
       throw new Error("AI returned an empty response.");
     }
+    let jsonMatch = responseText.match(/```json\n([\s\S]*)\n```/);
+    let jsonString = jsonMatch ? jsonMatch[1] : responseText;
+    
+    // Attempt parsing
+    const parsedData = JSON.parse(jsonString);
+    res.json({ success: true, data: parsedData });
 
-    const recipeData = JSON.parse(responseText);
-
-    res.status(200).json({
-      success: true,
-      data: recipeData
-    });
   } catch (error: any) {
     console.error("AI Analysis Error:", error);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to analyze image with AI.",
-      details: error.message 
-    });
+    if (error.status === 429 || error.message?.includes("429")) {
+      res.status(429).json({ success: false, error: "AI rate limit exceeded. Please try again in a few moments." });
+    } else {
+      res.status(500).json({ success: false, error: "Failed to analyze image.", details: error.message });
+    }
   }
 };
