@@ -315,8 +315,8 @@ const mockRecipes = [
 ];
 
 async function seed() {
-  const uri = process.env.MONGODB_URI || "mongodb://localhost:27017";
-  const client = new MongoClient(uri, {
+  const uri = process.env.MONGODB_URI;
+  const client = new MongoClient(uri as string, {
     serverApi: {
       version: ServerApiVersion.v1,
       strict: true,

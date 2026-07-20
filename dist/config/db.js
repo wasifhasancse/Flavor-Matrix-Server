@@ -10,7 +10,7 @@ exports.closeDB = closeDB;
 const mongodb_1 = require("mongodb");
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/flavor-matrix";
+const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = MONGO_URI.split("/").pop()?.split("?")[0] || "flavor-matrix";
 let client = null;
 let db = null;

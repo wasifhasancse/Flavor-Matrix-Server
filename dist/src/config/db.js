@@ -7,7 +7,7 @@ const uri = process.env.MONGODB_URI;
 if (!uri) {
     console.warn("WARNING: MONGODB_URI is not defined in the environment.");
 }
-exports.client = new mongodb_1.MongoClient(uri || "mongodb://localhost:27017", {
+exports.client = new mongodb_1.MongoClient(uri, {
     serverApi: {
         version: mongodb_1.ServerApiVersion.v1,
         strict: true,

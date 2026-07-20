@@ -74,7 +74,7 @@ app.use((err, req, res, next) => {
 (0, db_1.connectDB)()
     .then(() => {
     app.listen(PORT, () => {
-        console.log(`[Server] running on http://localhost:${PORT}`);
+        console.log(`[Server] running on port ${PORT}`);
     });
 })
     .catch((err) => {

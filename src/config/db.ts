@@ -5,7 +5,7 @@ if (!uri) {
   console.warn("WARNING: MONGODB_URI is not defined in the environment.");
 }
 
-export const client = new MongoClient(uri || "mongodb://localhost:27017", {
+export const client = new MongoClient(uri as string, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
@@ -13,7 +13,7 @@ export const client = new MongoClient(uri || "mongodb://localhost:27017", {
   },
 });
 
-const dbName = process.env.MONGODB_DATABASE_NAME || "flavor-matrix";
+const dbName = process.env.MONGODB_DATABASE_NAME;
 export const db: Db = client.db(dbName);
 
 export const collections = {
